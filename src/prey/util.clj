@@ -1,6 +1,21 @@
 (ns prey.util
-  (:require [prey.config :as config]))
+  (:require [prey.config :as config])
+  (:import [java.util UUID]))
 
+(defn new-id []
+  (UUID/randomUUID))
+
+(defn distance [a b]
+  (when (and a b)
+    (Math/sqrt (+ (Math/pow (- (:x a) (:x b)) 2)
+                  (Math/pow (- (:y a) (:y b)) 2)))))
+
+(defn viable-random-position [terrain grid-size]
+  (let [x (rand-int grid-size)
+        y (rand-int grid-size)]
+    (if (contains? terrain [x y])
+      (viable-random-position terrain grid-size)
+      [x y])))
 
 (defn new-position [source direction]
   (let [step-length (get-in config/config [(:type source) :speed])

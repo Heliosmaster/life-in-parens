@@ -1,13 +1,16 @@
 (ns prey.core
   (:require [quil.core :as q]
+            [prey.food :as food]
             [prey.terrain :as terrain]
             [prey.config :as config]
             [prey.util :as util]
-            [quil.middleware :as m])
-  (:import [java.util UUID]))
+            [quil.middleware :as m]))
 
-(defn new-id []
-  (UUID/randomUUID))
+(def initial-interactions {:created {}
+                           :destroyed []})
+
+(def interactions (atom initial-interactions))
+
 
 (defn stats [state]
   (let [preys (vals (:preys state))
@@ -38,21 +41,10 @@
      :ymax (+ (:y being) sr)
      :size (inc (* 2 sr))}))
 
-(defn distance [a b]
-  (when (and a b)
-    (Math/sqrt (+ (Math/pow (- (:x a) (:x b)) 2)
-                  (Math/pow (- (:y a) (:y b)) 2)))))
 
-
-(defn new-food [{:keys [x y]}]
-  (let [id (new-id)]
-    [id {:x x
-         :id id
-         :y y
-         :type :food}]))
 
 (defn new-prey [{:keys [x y]}] ;; mother and father should be used here
-  (let [id (new-id)]
+  (let [id (util/new-id)]
     [id {:x x
          :y y
          :hunger 0
@@ -64,13 +56,6 @@
          :id id
          :type :prey}]))
 
-(defn initialize-food [terrain]
-  (into {} (for [x (range 0 config/grid-size)
-                 y (range 0 config/grid-size)
-                 :let [p (rand)]
-                 :when (and (<= p (get-in config/config [:food :density]))
-                            (not (contains? terrain [x y])))]
-             (new-food {:x x :y y}))))
 
 (defn initialize-preys [terrain]
   (into {} (for [x (range 0 config/grid-size)
@@ -82,7 +67,7 @@
 
 (defn initialize-world []
   (let [terrain (terrain/initialize)]
-    {:food (initialize-food terrain)
+    {:food (food/initialize-food terrain)
      :terrain terrain
      :preys (initialize-preys terrain)}))
 
@@ -91,7 +76,6 @@
   (initialize-world))
 
 ;;; update
-
 
 (defn tick-prey [prey]
   (let [prey (-> prey
@@ -107,12 +91,8 @@
                             (and (<= (:xmin s) (:x food) (:xmax s))
                                  (<= (:ymin s) (:y food) (:ymax s))))
                           (:food world))]
-    (first (sort-by (fn [[_id food]] (distance prey food)) seen-food))))
+    (first (sort-by (fn [[_id food]] (util/distance prey food)) seen-food))))
 
-(def initial-interactions {:created {}
-                           :destroyed []})
-
-(def interactions (atom initial-interactions))
 
 (defn destroy! [type {:keys [id] :as _being}]
   (swap! interactions #(update % :destroyed conj {:type type :id id})))
@@ -130,14 +110,14 @@
                                   (<= (:ymin s) (:y other-prey) (:ymax s))
                                   (not= (:gender prey) (:gender other-prey))))
                            (:preys world))]
-    (first (sort-by (fn [[_id mate]] (distance prey mate)) seen-mates))))
+    (first (sort-by (fn [[_id mate]] (util/distance prey mate)) seen-mates))))
 
 
 
 (defn find-prey-food [state prey]
   (let [[_food-id food] (closest-food state prey)]
     (if food
-      (if (pos? (distance prey food))
+      (if (pos? (util/distance prey food))
         (util/move-towards prey food (:terrain state))
         (do
           (destroy! :food food)
@@ -214,24 +194,9 @@
     (reset! interactions initial-interactions)
     new-state))
 
-(defn viable-random-position [terrain grid-size]
-  (let [x (rand-int grid-size)
-        y (rand-int grid-size)]
-    (if (contains? terrain [x y])
-      (viable-random-position terrain grid-size)
-      [x y])))
-
-(defn replenish-food [state]
-  (let [total-food-quantity (Math/round (double (* config/grid-size config/grid-size (get-in config/config [:food :density]))))
-        food-to-spawn (- total-food-quantity (count (:food state)))
-        food-coords (repeatedly food-to-spawn #(viable-random-position (:terrain state) config/grid-size))
-        fresh-food (into {} (map (fn [[x y]] (new-food {:x x :y y})) food-coords))]
-    (merge (:food state) fresh-food)))
-
-
 (defn update-state [state]
   (let [new-preys (update-all-preys state)
-        new-food (replenish-food state)]
+        new-food (food/replenish-food state)]
     (-> state
         (assoc :preys new-preys)
         (assoc :food new-food)

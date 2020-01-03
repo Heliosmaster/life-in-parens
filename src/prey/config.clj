@@ -5,7 +5,7 @@
 (def grid-size 100)
 (def unit-size 5)
 (def world-size (* grid-size unit-size))
-(def sight-radius 10)
+(def sight-radius 5)
 (def fps 100)
 
 (def config

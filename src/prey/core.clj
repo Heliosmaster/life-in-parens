@@ -11,7 +11,6 @@
 
 (def interactions (atom initial-interactions))
 
-
 (defn stats [state]
   (let [preys (vals (:preys state))
         males (filter #(= :male (:gender %)) preys)
@@ -25,7 +24,6 @@
                                                                                                         (pos? nfemales))
                                                                                                  (double (/ nmales nfemales))
                                                                                                  0.0)))))
-
 (defn color [being]
   (if (:gender being)
     (get-in config/config [(:type being) :color (:gender being)])
@@ -33,13 +31,6 @@
 
 (defn ->size [i] (* i config/unit-size))
 
-(defn sight-box [being]
-  (let [sr config/sight-radius]
-    {:xmin (- (:x being) sr)
-     :xmax (+ (:x being) sr)
-     :ymin (- (:y being) sr)
-     :ymax (+ (:y being) sr)
-     :size (inc (* 2 sr))}))
 
 
 
@@ -86,7 +77,7 @@
       prey)))
 
 (defn closest-food [world prey]
-  (let [s (sight-box prey)
+  (let [s (util/sight-box prey)
         seen-food (filter (fn [[_id food]]
                             (and (<= (:xmin s) (:x food) (:xmax s))
                                  (<= (:ymin s) (:y food) (:ymax s))))
@@ -104,7 +95,7 @@
     (swap! interactions #(update-in % [:created type] merge children))))
 
 (defn closest-mate [world prey]
-  (let [s (sight-box prey)
+  (let [s (util/sight-box prey)
         seen-mates (filter (fn [[_id other-prey]]
                              (and (<= (:xmin s) (:x other-prey) (:xmax s))
                                   (<= (:ymin s) (:y other-prey) (:ymax s))
@@ -214,7 +205,7 @@
             (->size 1))))
 
 (defn draw-sight [being]
-  (let [s (sight-box being)]
+  (let [s (util/sight-box being)]
     (q/fill 0 0 0 0)
     (q/stroke-weight 1)
     (q/rect (->size (:xmin s))

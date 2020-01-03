@@ -5,6 +5,14 @@
 (defn new-id []
   (UUID/randomUUID))
 
+(defn sight-box [being]
+  (let [sr config/sight-radius]
+    {:xmin (- (:x being) sr)
+     :xmax (+ (:x being) sr)
+     :ymin (- (:y being) sr)
+     :ymax (+ (:y being) sr)
+     :size (inc (* 2 sr))}))
+
 (defn distance [a b]
   (when (and a b)
     (Math/sqrt (+ (Math/pow (- (:x a) (:x b)) 2)
@@ -38,17 +46,6 @@
          (<= 0 (:y new-pos) (dec config/grid-size))
          (not (contains? terrain [(:x new-pos) (:y new-pos)])))))
 
-(defn move-towards [source target terrain]
-  (let [directions (cond-> []
-                     (pos? (- (:x target) (:x source))) (conj :east)
-                     (neg? (- (:x target) (:x source))) (conj :west)
-                     (pos? (- (:y target) (:y source))) (conj :south)
-                     (neg? (- (:y target) (:y source))) (conj :north))
-        valid-directions (filter #(valid-direction? source % terrain)
-                                 directions)]
-    (if (seq valid-directions)
-      (merge source (new-position source (rand-nth valid-directions)))
-      source)))
 
 (defn move-randomly [source terrain]
   (let [valid-directions (filter #(valid-direction? source % terrain)
@@ -67,3 +64,15 @@
             (assoc :direction new-direction)
             (assoc :direction-inertia new-inertia)))
       source)))
+
+(defn move-towards [source target terrain]
+  (let [directions (cond-> []
+                     (pos? (- (:x target) (:x source))) (conj :east)
+                     (neg? (- (:x target) (:x source))) (conj :west)
+                     (pos? (- (:y target) (:y source))) (conj :south)
+                     (neg? (- (:y target) (:y source))) (conj :north))
+        valid-directions (filter #(valid-direction? source % terrain)
+                                 directions)]
+    (if (seq valid-directions)
+      (merge source (new-position source (rand-nth valid-directions)))
+      (move-randomly source terrain))))

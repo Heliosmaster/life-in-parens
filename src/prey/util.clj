@@ -46,8 +46,7 @@
          (<= 0 (:y new-pos) (dec config/grid-size))
          (not (contains? terrain [(:x new-pos) (:y new-pos)])))))
 
-
-(defn move-randomly [source terrain]
+(defn move-randomly-tx [source terrain]
   (let [valid-directions (filter #(valid-direction? source % terrain)
                                  [:north :south :east :west])
         current-direction (:direction source)]
@@ -59,13 +58,30 @@
             new-inertia (if (= current-direction new-direction)
                           (dec (:direction-inertia source))
                           (get-in config/config [(:type source) :direction-inertia]))]
-        (-> source
-            (merge (new-position source new-direction))
-            (assoc :direction new-direction)
-            (assoc :direction-inertia new-inertia)))
-      source)))
+        {:type :move
+         :actor-id (:id source)
+         :actor-type (:type source)
+         :destination (new-position source new-direction)
+         :direction new-direction
+         :new-inertia new-inertia})
+      {:type :wait
+       :actor-id (:id source)})))
 
-(defn move-towards [source target terrain]
+
+
+(defn resolve-action [source action]
+  (case (:type action)
+    :move (-> source
+              (merge (:destination action))
+              (assoc :direction (:direction action))
+              (assoc :direction-inertia (:new-inertia action)))
+    :wait source
+    source))
+
+(defn move-randomly [source terrain]
+  (resolve-action source (move-randomly-tx source terrain)))
+
+(defn move-towards-tx [source target terrain]
   (let [directions (cond-> []
                      (pos? (- (:x target) (:x source))) (conj :east)
                      (neg? (- (:x target) (:x source))) (conj :west)
@@ -73,6 +89,21 @@
                      (neg? (- (:y target) (:y source))) (conj :north))
         valid-directions (filter #(valid-direction? source % terrain)
                                  directions)]
+
     (if (seq valid-directions)
-      (merge source (new-position source (rand-nth valid-directions)))
-      (move-randomly source terrain))))
+      {:type :move
+       :actor-id (:id source)
+       :actor-type (:type source)
+       :destination (new-position source (rand-nth valid-directions))}
+      (move-randomly-tx source terrain))))
+
+(defn move-towards [source target terrain]
+  (resolve-action source (move-towards-tx source target terrain)))
+
+(defn closest [things being]
+  (let [s (sight-box being)
+        seen-things (filter (fn [[_id thing]]
+                              (and (<= (:xmin s) (:x thing) (:xmax s))
+                                   (<= (:ymin s) (:y thing) (:ymax s))))
+                            things)]
+    (first (sort-by (fn [[_id thing]] (distance being thing)) seen-things))))

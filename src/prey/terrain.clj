@@ -26,8 +26,10 @@
 
 
 (defn initialize []
-  (nth (iterate refine (generate))
-             20))
+  (if config/terrain-disabled?
+    #{}
+    (nth (iterate refine (generate))
+         20)))
 
 (comment
   (t/defnp random-set [n]

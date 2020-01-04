@@ -1,6 +1,8 @@
 (ns prey.core
   (:require [quil.core :as q]
             [prey.food :as food]
+            [prey.prey :as prey]
+            [prey.actions :as actions]
             [prey.terrain :as terrain]
             [prey.config :as config]
             [prey.util :as util]
@@ -30,9 +32,6 @@
     (get-in config/config [(:type being) :color])))
 
 (defn ->size [i] (* i config/unit-size))
-
-
-
 
 (defn new-prey [{:keys [x y]}] ;; mother and father should be used here
   (let [id (util/new-id)]
@@ -76,13 +75,13 @@
       (update prey :pregnancy inc)
       prey)))
 
-(defn closest-food [world prey]
-  (let [s (util/sight-box prey)
-        seen-food (filter (fn [[_id food]]
-                            (and (<= (:xmin s) (:x food) (:xmax s))
-                                 (<= (:ymin s) (:y food) (:ymax s))))
-                          (:food world))]
-    (first (sort-by (fn [[_id food]] (util/distance prey food)) seen-food))))
+(defn closest [things being]
+  (let [s (util/sight-box being)
+        seen-things (filter (fn [[_id thing]]
+                              (and (<= (:xmin s) (:x thing) (:xmax s))
+                                   (<= (:ymin s) (:y thing) (:ymax s))))
+                            things)]
+    (first (sort-by (fn [[_id thing]] (util/distance being thing)) seen-things))))
 
 
 (defn destroy! [type {:keys [id] :as _being}]
@@ -104,16 +103,15 @@
     (first (sort-by (fn [[_id mate]] (util/distance prey mate)) seen-mates))))
 
 
-
-(defn find-prey-food [state prey]
-  (let [[_food-id food] (closest-food state prey)]
-    (if food
-      (if (pos? (util/distance prey food))
-        (util/move-towards prey food (:terrain state))
-        (do
-          (destroy! :food food)
-          (update prey :hunger (fn [old-hunger] (min 0 (- old-hunger (get-in config/config [:prey :nutrition])))))))
-      (util/move-randomly prey (:terrain state)))))
+#_(defn find-prey-food [state prey]
+    (let [[_food-id food] (closest (:food state) prey)]
+      (if food
+        (if (pos? (util/distance prey food))
+          (util/move-towards prey food (:terrain state))
+          (do
+            (destroy! :food food)
+            (update prey :hunger (fn [old-hunger] (min 0 (- old-hunger (get-in config/config [:prey :nutrition])))))))
+        (util/move-randomly prey (:terrain state)))))
 
 #_(defn mate-male-prey [prey mate state]
     (if (pos? (distance prey mate))
@@ -144,7 +142,12 @@
 (defn fertile? [prey]
   (> (:desire prey) (get-in config/config [:prey :desire-threshold])))
 
-(defn update-prey [state prey]
+
+(defn update-prey [prey state]
+  (let [action (prey/take-decision prey state)]
+    (util/resolve-action prey action)))
+
+#_(defn update-prey [state prey]
   (if (:pregnant? prey)
     (if (pregnancy-over? prey)
       (do (spawn-offspring! :preys prey)
@@ -159,9 +162,11 @@
           (find-prey-mate state prey)
           (find-prey-food state prey)))))
 
+
+
 (defn update-all-preys [state]
   (reduce (fn [acc [id prey]]
-            (let [new-prey (tick-prey (update-prey state prey))]
+            (let [new-prey (tick-prey (update-prey prey state))]
               (assoc acc id new-prey)))
           {}
           (:preys state)))
@@ -186,12 +191,14 @@
     new-state))
 
 (defn update-state [state]
-  (let [new-preys (update-all-preys state)
-        new-food (food/replenish-food state)]
-    (-> state
+  (let [actions (map (fn [[_prey-id prey]] (prey/take-decision prey state))
+                     (:preys state))
+        #_#_new-food (food/replenish-food state)]
+    (reduce actions/resolve-action state actions)
+    #_(-> state
         (assoc :preys new-preys)
-        (assoc :food new-food)
-        (resolve-interactions))))
+        #_(assoc :food new-food)
+        #_(resolve-interactions))))
 
 ;;; drawing
 
@@ -216,19 +223,14 @@
 (defn draw-state [state]
   (q/background 137 125 123)
   (draw-terrain state)
-  #_(when debug?
-      (prn "---------")
-      (doseq [prey (vals (:preys state))]
-        (prn prey)))
-  (when (zero? (mod (q/frame-count) 10))
+  (when (and config/debug?
+             (zero? (mod (q/frame-count) 10)))
     (print-stats state))
   (doseq [being (concat (vals (:food state))
                         (vals (:preys state)))]
     (let [xx (->size (:x being))
           yy (->size (:y being))]
-      ; Set circle color.e
       (apply q/fill (color being))
-      ; Calculate x and y coordinates of the circle.
       (q/no-stroke)
       (q/rect xx yy config/unit-size config/unit-size)
       (when (and config/debug? (= :prey (:type being)))

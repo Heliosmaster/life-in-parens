@@ -1,12 +1,12 @@
 (ns prey.config)
 
-
+(def terrain-disabled? true)
 (def debug? false)
-(def grid-size 100)
-(def unit-size 5)
+(def grid-size 20)
+(def unit-size 20)
 (def world-size (* grid-size unit-size))
 (def sight-radius 5)
-(def fps 100)
+(def fps 10)
 
 (def config
   {:prey {:color {:male [204 230 255]

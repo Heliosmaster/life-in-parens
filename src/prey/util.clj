@@ -67,17 +67,6 @@
       {:type :wait
        :actor-id (:id source)})))
 
-
-
-(defn resolve-action [source action]
-  (case (:type action)
-    :move (-> source
-              (merge (:destination action))
-              (assoc :direction (:direction action))
-              (assoc :direction-inertia (:new-inertia action)))
-    :wait source
-    source))
-
 (defn move-towards-tx [source target terrain]
   (let [directions (cond-> []
                      (pos? (- (:x target) (:x source))) (conj :east)
@@ -94,13 +83,26 @@
        :destination (new-position source (rand-nth valid-directions))}
       (move-randomly-tx source terrain))))
 
-(defn move-towards [source target terrain]
-  (resolve-action source (move-towards-tx source target terrain)))
+(defn closest
+  ([things being]
+   (closest things being (constantly true)))
+  ([things being filter-fn]
+   (let [s (sight-box being)
+         seen-things (filter (fn [[_id thing]]
+                               (and (<= (:xmin s) (:x thing) (:xmax s))
+                                    (<= (:ymin s) (:y thing) (:ymax s))
+                                    (not= thing being)
+                                    (filter-fn being thing)))
+                             things)]
+     (first (sort-by (fn [[_id thing]] (distance being thing))
+                     seen-things)))))
 
-(defn closest [things being]
-  (let [s (sight-box being)
-        seen-things (filter (fn [[_id thing]]
-                              (and (<= (:xmin s) (:x thing) (:xmax s))
-                                   (<= (:ymin s) (:y thing) (:ymax s))))
-                            things)]
-    (first (sort-by (fn [[_id thing]] (distance being thing)) seen-things))))
+(defn in-same-space
+  ([things being]
+    (in-same-space things being (constantly true)))
+  ([things being filter-fn]
+   (first (filter (fn [[_thing-id thing]] (and (= (:x being) (:x thing))
+                                               (= (:y being) (:y thing))
+                                               (not= (:id being) (:id thing))
+                                               (filter-fn being thing)))
+                  things))))

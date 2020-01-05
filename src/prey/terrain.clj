@@ -26,10 +26,11 @@
 
 
 (defn initialize []
-  (if config/terrain-disabled?
-    #{}
-    (nth (iterate refine (generate))
-         20)))
+  (nth (iterate refine (generate))
+       20))
+
+(defn debug-initialize []
+  #{})
 
 (comment
   (t/defnp random-set [n]

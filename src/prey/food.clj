@@ -18,6 +18,11 @@
        (map (juxt :id identity))
        (into {})))
 
+(defn debug-initialize-food []
+  (->> [(new-food {:x 5 :y 5})]
+       (map (juxt :id identity))
+       (into {})))
+
 
 (defn replenish-food-txs [state]
   (let [total-food-quantity (Math/round (double (* config/grid-size config/grid-size (get-in config/config [:food :density]))))

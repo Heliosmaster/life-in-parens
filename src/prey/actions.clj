@@ -18,6 +18,14 @@
                  (:direction action) (assoc :direction (:direction action))
                  (:new-inertia action) (assoc :direction-inertia (:new-inertia action))))))
 
+(defmethod resolve-action [:prey :mate]
+  [state action]
+  (update-in state [:preys (:actor-id action)]
+             (fn [prey] #p (cond-> prey
+                          :always (assoc :desire 0)
+                          (= :female (:gender prey))
+                          (assoc :pregnant? true)))))
+
 (defmethod resolve-action [:prey :eat-food]
   [state action]
   (-> state
@@ -29,10 +37,9 @@
   [state _action]
   state)
 
-
 (defmethod resolve-action [:food :new-food]
   [state action]
   (assoc-in state [:food (:actor-id action)] (:food action)))
 
-(defmethod resolve-action :default [state _]
+(defmethod resolve-action :default [state _action]
   state)

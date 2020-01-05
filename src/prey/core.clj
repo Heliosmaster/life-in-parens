@@ -8,9 +8,6 @@
             [prey.util :as util]
             [quil.middleware :as m]))
 
-(def initial-interactions {:created {} :destroyed []})
-(def interactions (atom initial-interactions))
-
 (defn stats [state]
   (let [preys (vals (:preys state))
         males (filter #(= :male (:gender %)) preys)
@@ -18,16 +15,28 @@
     {:nmales (count males)
      :nfemales (count females)}))
 
+(defn print-preys [state]
+  (doseq [[_pid p] (:preys state)]
+    (clojure.pprint/pprint p)))
+
+(defn print-actions [actions]
+  (prn "------------")
+  (prn (q/frame-count))
+  (doseq [a actions]
+    (clojure.pprint/pprint a)))
+
 (defn print-stats [state]
   (let [{:keys [nmales nfemales]} (stats state)]
     (prn (format "%5d: Male: %5d - Female: %5d - Ratio: %2.2f" (q/frame-count) nmales nfemales (if (and (pos? nmales)
                                                                                                         (pos? nfemales))
                                                                                                  (double (/ nmales nfemales))
                                                                                                  0.0)))))
-(defn color [being]
-  (if (:gender being)
-    (get-in config/config [(:type being) :color (:gender being)])
-    (get-in config/config [(:type being) :color])))
+(defn color [being] ;; FIXME temporary pregnant just for debugging
+  (if (:pregnant? being)
+    (get-in config/config [(:type being) :pregnant-color])
+    (if (:gender being)
+      (get-in config/config [(:type being) :color (:gender being)])
+      (get-in config/config [(:type being) :color]))) )
 
 (defn ->size [i] (* i config/unit-size))
 
@@ -37,78 +46,40 @@
      :terrain terrain
      :preys (prey/initialize-preys terrain)}))
 
+(defn debug-initialize-world []
+  {:food (food/debug-initialize-food)
+   :terrain (terrain/debug-initialize)
+   :preys (prey/debug-initialize-preys)})
+
+
+
 (defn setup []
   (q/frame-rate config/fps)
-  (initialize-world))
+  (if config/debug?
+    (debug-initialize-world)
+    (initialize-world)))
 
 ;;; update
 
 (defn tick-prey [prey]
-  (let [prey (-> prey
-                 (update :desire inc)
-                 (update :hunger inc))]
-    (if (:pregnant? prey)
-      (update prey :pregnancy inc)
-      prey)))
+  (cond-> prey
+    :always (update :hunger inc)
+    :always (update :desire inc)
+    (:pregnant? prey) (update :pregnancy (fnil inc 0))))
 
 (defn tick-world [state]
   (-> state
       (update :preys (fn [preys] (reduce (fn [acc [prey-id prey]] (assoc acc prey-id (tick-prey prey))) {} preys)))))
 
 
-#_(defn spawn-offspring! [type being] ;; TODO use both parents
-  (let [n-children (inc (rand-int 3))
-        children (into {} (repeatedly n-children (fn [] (merge (new-prey being)
-                                                               ))))]
-    (swap! interactions #(update-in % [:created type] merge children))))
-
-#_(defn closest-mate [world prey]
-  (let [s (util/sight-box prey)
-        seen-mates (filter (fn [[_id other-prey]]
-                             (and (<= (:xmin s) (:x other-prey) (:xmax s))
-                                  (<= (:ymin s) (:y other-prey) (:ymax s))
-                                  (not= (:gender prey) (:gender other-prey))))
-                           (:preys world))]
-    (first (sort-by (fn [[_id mate]] (util/distance prey mate)) seen-mates))))
-
-
-
-#_(defn mate-male-prey [prey mate state]
-    (if (pos? (distance prey mate))
-      (move-towards prey mate (:terrain state))
-      (assoc prey :desire 0)))
-
-#_(defn mate-female-prey [prey mate]
-    (if (zero? (distance prey mate))
-      (merge prey {:desire 0
-                   :pregnancy 0
-                   :pregnant? true})
-      prey))
-
-#_(defn find-prey-mate [state prey]
-    (let [[_mate-id mate] (closest-mate state prey)]
-      (if mate
-        (if (= :female (:gender prey))
-          (mate-female-prey prey mate)
-          (mate-male-prey prey mate))
-        (move-randomly prey (:terrain state)))))
-
-(defn pregnancy-over? [prey]
-  (>= (:pregnancy prey) (get-in config/config [:prey :pregnancy-duration])))
-
-(defn starved? [prey]
-  (>= (:hunger prey) (get-in config/config [:prey :starvation-hunger])))
-
-(defn fertile? [prey]
-  (> (:desire prey) (get-in config/config [:prey :desire-threshold])))
-
-
 (defn update-state [state]
-  (let [prey-actions (pmap (fn [[_prey-id prey]] (prey/take-decision prey state))
+  (let [prey-actions (map (fn [[_prey-id prey]] (prey/take-decision prey state))
                      (:preys state))
-        food-actions (food/replenish-food-txs state)]
-    (-> (reduce actions/resolve-action state (concat prey-actions
-                                                     food-actions))
+        food-actions (food/replenish-food-txs state)
+        actions (concat prey-actions food-actions)]
+    (print-actions actions)
+    (print-preys state)
+    (-> (reduce actions/resolve-action state actions)
         (tick-world))))
 
 ;;; drawing
@@ -132,9 +103,9 @@
             (->size (:size s)))))
 
 (defn draw-state [state]
-  (q/background 137 125 123)
+  (apply q/background config/background-color)
   (draw-terrain state)
-  (when (and config/debug?
+  #_(when (and config/debug?
              (zero? (mod (q/frame-count) 10)))
     (print-stats state))
   (doseq [being (concat (vals (:food state))

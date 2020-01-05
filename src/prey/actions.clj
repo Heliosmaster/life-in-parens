@@ -16,7 +16,6 @@
 
 (defmethod resolve-action [:prey :eat-food]
   [state action]
-  (prn [:a action])
   (-> state
       (update-in [:preys (:actor-id action) :hunger]
                  (fn [old-hunger] (min 0 (- old-hunger (get-in config/config [:prey :nutrition])))))
@@ -25,6 +24,11 @@
 (defmethod resolve-action [:prey :wait]
   [state _action]
   state)
+
+
+(defmethod resolve-action [:food :new-food]
+  [state action]
+  (assoc-in state [:food (:actor-id action)] (:food action)))
 
 (defmethod resolve-action :default [state _]
   state)

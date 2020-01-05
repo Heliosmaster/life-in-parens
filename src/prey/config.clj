@@ -13,7 +13,7 @@
                   :female [255 179 230]}
           :initial-density 0.005
           :pregnancy-duration 5
-          :starvation-hunger 40
+          :starve-at 40
           :desire-threshold 25
           :direction-inertia 10
           :nutrition 10

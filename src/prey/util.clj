@@ -78,9 +78,6 @@
     :wait source
     source))
 
-(defn move-randomly [source terrain]
-  (resolve-action source (move-randomly-tx source terrain)))
-
 (defn move-towards-tx [source target terrain]
   (let [directions (cond-> []
                      (pos? (- (:x target) (:x source))) (conj :east)

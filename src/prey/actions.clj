@@ -5,6 +5,10 @@
   (fn [_state action]
     [(:actor-type action) (:type action)]))
 
+(defmethod resolve-action [:prey :die]
+  [state action]
+  (update-in state [:preys] dissoc (:actor-id action)))
+
 (defmethod resolve-action [:prey :move]
   [state action]
   (update-in state [:preys (:actor-id action)]

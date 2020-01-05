@@ -8,9 +8,7 @@
             [prey.util :as util]
             [quil.middleware :as m]))
 
-(def initial-interactions {:created {}
-                           :destroyed []})
-
+(def initial-interactions {:created {} :destroyed []})
 (def interactions (atom initial-interactions))
 
 (defn stats [state]
@@ -52,6 +50,10 @@
     (if (:pregnant? prey)
       (update prey :pregnancy inc)
       prey)))
+
+(defn tick-world [state]
+  (-> state
+      (update :preys (fn [preys] (reduce (fn [acc [prey-id prey]] (assoc acc prey-id (tick-prey prey))) {} preys)))))
 
 
 #_(defn spawn-offspring! [type being] ;; TODO use both parents
@@ -105,8 +107,9 @@
   (let [prey-actions (pmap (fn [[_prey-id prey]] (prey/take-decision prey state))
                      (:preys state))
         food-actions (food/replenish-food-txs state)]
-    (reduce actions/resolve-action state (concat prey-actions
-                                                 food-actions))))
+    (-> (reduce actions/resolve-action state (concat prey-actions
+                                                     food-actions))
+        (tick-world))))
 
 ;;; drawing
 

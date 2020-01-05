@@ -9,6 +9,8 @@
 ;;   - Find food (survive)
 ;;   - Mate (continue the species)
 
+(def prey-config (:prey config/config))
+
 
 (defn new-prey [{:keys [x y]}] ;; mother and father should be used here
   {:x x
@@ -16,9 +18,9 @@
    :hunger 0
    :desire 0
    :direction (rand-nth [:north :south :east :west])
-   :speed (get-in config/config [:prey :speed])
+   :speed (:speed prey-config)
    :gender (rand-nth [:male :female])
-   :direction-inertia (get-in config/config [:prey :direction-inertia])
+   :direction-inertia (:direction-inertia prey-config)
    :id (util/new-id)
    :type :prey})
 
@@ -27,7 +29,7 @@
   (->> (for [x (range 0 config/grid-size)
              y (range 0 config/grid-size)
              :let [p (rand)]
-             :when (and (<= p (get-in config/config [:prey :initial-density]))
+             :when (and (<= p (:initial-density prey-config))
                         (not (contains? terrain [x y])))]
          (new-prey {:x x :y y}))
        (map (juxt :id identity))
@@ -44,6 +46,13 @@
   (let [action (find-food-tx prey state)]
     action))
 
+(defn die [prey]
+  (when (>= (:hunger prey)
+            (:starve-at prey-config))
+    {:type :die
+     :actor-id (:id prey)
+     :actor-type :prey}))
+
 (defn interact [prey state]
   (let [[food-id food] (first (filter (fn [[_food-id food]] (and (= (:x prey) (:x food))
                                                                  (= (:y prey) (:y food))))
@@ -55,5 +64,6 @@
        :target-id food-id})))
 
 (defn take-decision [prey state]
-  (or (interact prey state)
+  (or (die prey)
+      (interact prey state)
       (fullfil-desire prey state)))

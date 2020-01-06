@@ -31,8 +31,7 @@
                    :pregnant? true})
       prey))
 
-(defn pregnancy-over? [prey]
-  (>= (:pregnancy prey) (get-in config/config [:prey :pregnancy-duration])))
+
 
 (defn new-prey [{:keys [x y gender]}] ;; mother and father should be used here
   {:x x
@@ -48,18 +47,20 @@
 
 
 (defn initialize-preys [terrain]
-    (->> (for [x (range 0 config/grid-size)
-               y (range 0 config/grid-size)
-               :let [p (rand)]
-               :when (and (<= p (:initial-density prey-config))
-                          (not (contains? terrain [x y])))]
-           (new-prey {:x x :y y}))
-         (map (juxt :id identity))
-         (into {})))
+  (->> (for [x (range 0 config/grid-size)
+             y (range 0 config/grid-size)
+             :let [p (rand)]
+             :when (and (<= p (:initial-density prey-config))
+                        (not (contains? terrain [x y])))]
+         (new-prey {:x x :y y}))
+       (map (juxt :id identity))
+       (into {})))
 
 (defn debug-initialize-preys []
   (->> [(new-prey {:x 0 :y 0 :gender :male})
-        (new-prey {:x 2 :y 2 :gender :female})]
+        (new-prey {:x 2 :y 2 :gender :female})
+        #_#_(new-prey {:x 5 :y 5 :gender :male})
+            (new-prey {:x 6 :y 6 :gender :female})]
        (map (juxt :id identity))
        (into {})))
 
@@ -101,15 +102,26 @@
      :actor-id (:id prey)
      :actor-type :prey}))
 
+(defn give-birth [prey]
+  (when (and (= :female (:gender prey))
+             (:pregnant? prey)
+             (>= (:pregnancy prey) (:pregnancy-duration prey-config)))
+    {:type :spawn
+     :actor-id (:id prey)
+     :actor-type :prey
+     :children [(new-prey (select-keys prey [:x :y]))
+                (new-prey (select-keys prey [:x :y]))]}))
 
 (defn interact [prey state] ;; TODO also priority of this could be DNA-encoded
   (let [[mate-id mate] (util/in-same-space (:preys state) prey viable-mate?)
         [food-id food] (util/in-same-space (:food state) prey)]
     (cond
-      (and mate (mating? prey)) {:type :mate
-                                 :actor-id (:id prey)
-                                 :actor-type :prey
-                                 :mate-id mate-id}
+      (and mate
+           (mating? prey)
+           (mating? mate)) {:type :mate
+                            :actor-id (:id prey)
+                            :actor-type :prey
+                            :mate-id mate-id}
       food {:type :eat-food
             :actor-id (:id prey)
             :actor-type :prey
@@ -117,6 +129,8 @@
 
 (defn take-decision [prey state]
   (or (die prey)
+      (give-birth prey)
       (interact prey state)
       (fullfil-desire :mate prey state)
       (fullfil-desire :food prey state)))
+

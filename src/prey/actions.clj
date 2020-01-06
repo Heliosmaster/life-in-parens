@@ -1,6 +1,7 @@
 (ns prey.actions
   (:require [prey.config :as config]))
 
+
 (defmulti resolve-action
   (fn [_state action]
     [(:actor-type action) (:type action)]))
@@ -21,10 +22,9 @@
 (defmethod resolve-action [:prey :mate]
   [state action]
   (update-in state [:preys (:actor-id action)]
-             (fn [prey] #p (cond-> prey
+             (fn [prey] (cond-> prey
                           :always (assoc :desire 0)
-                          (= :female (:gender prey))
-                          (assoc :pregnant? true)))))
+                          (= :female (:gender prey)) (assoc :pregnant? true)))))
 
 (defmethod resolve-action [:prey :eat-food]
   [state action]
@@ -32,6 +32,15 @@
       (update-in [:preys (:actor-id action) :hunger]
                  (fn [old-hunger] (min 0 (- old-hunger (get-in config/config [:prey :nutrition])))))
       (update-in [:food] dissoc (:target-id action))))
+
+(defmethod resolve-action [:prey :spawn]
+  [state action]
+  (-> state
+      (assoc-in [:preys (:actor-id action) :pregnant?] false)
+      (assoc-in [:preys (:actor-id action) :pregnancy] 0)
+      (update-in [:preys] merge (->> (:children action)
+                                    (map (juxt :id identity))
+                                    (into {})))))
 
 (defmethod resolve-action [:prey :wait]
   [state _action]

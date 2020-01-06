@@ -51,8 +51,6 @@
    :terrain (terrain/debug-initialize)
    :preys (prey/debug-initialize-preys)})
 
-
-
 (defn setup []
   (q/frame-rate config/fps)
   (if config/debug?
@@ -69,7 +67,9 @@
 
 (defn tick-world [state]
   (-> state
-      (update :preys (fn [preys] (reduce (fn [acc [prey-id prey]] (assoc acc prey-id (tick-prey prey))) {} preys)))))
+      (update :preys (fn [preys]
+                       (reduce (fn [acc [prey-id prey]]
+                                 (assoc acc prey-id (tick-prey prey))) {} preys)))))
 
 
 (defn update-state [state]
@@ -77,8 +77,9 @@
                      (:preys state))
         food-actions (food/replenish-food-txs state)
         actions (concat prey-actions food-actions)]
-    (print-actions actions)
-    (print-preys state)
+    (when config/debug?
+      (print-actions actions)
+      (print-preys state))
     (-> (reduce actions/resolve-action state actions)
         (tick-world))))
 

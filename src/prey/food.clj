@@ -23,7 +23,6 @@
        (map (juxt :id identity))
        (into {})))
 
-
 (defn replenish-food-txs [state]
   (let [total-food-quantity (Math/round (double (* config/grid-size config/grid-size (get-in config/config [:food :density]))))
         food-to-spawn (- total-food-quantity (count (:food state)))

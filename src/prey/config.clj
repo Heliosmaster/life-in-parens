@@ -1,11 +1,11 @@
 (ns prey.config)
 
-(def debug? true)
+(def debug? true #_ true)
 (def grid-size 20)
 (def unit-size 20)
 (def world-size (* grid-size unit-size))
 (def sight-radius 5)
-(def fps 1)
+(def fps 2)
 (def background-color [137 125 123])
 
 (def config

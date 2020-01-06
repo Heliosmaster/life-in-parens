@@ -24,7 +24,8 @@
   (update-in state [:preys (:actor-id action)]
              (fn [prey] (cond-> prey
                           :always (assoc :desire 0)
-                          (= :female (:gender prey)) (assoc :pregnant? true)))))
+                          (= :female (:gender prey)) (merge {:pregnant? true
+                                                             :children (:children action)})))))
 
 (defmethod resolve-action [:prey :eat-food]
   [state action]

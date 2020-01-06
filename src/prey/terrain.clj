@@ -26,7 +26,7 @@
 
 
 (defn initialize []
-  (nth (iterate refine (generate))
+  #{} #_ (nth (iterate refine (generate))
        20))
 
 (defn debug-initialize []

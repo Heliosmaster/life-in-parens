@@ -33,17 +33,20 @@
 
 
 
-(defn new-prey [{:keys [x y gender]}] ;; mother and father should be used here
+(defn new-prey [{:keys [x y gender]}]
   {:x x
    :y y
    :hunger 0
-   :desire 100
+   :desire 0
    :direction (rand-nth [:north :south :east :west])
    :speed (:speed prey-config)
    :gender (or gender (rand-nth [:male :female]))
    :direction-inertia (:direction-inertia prey-config)
    :id (util/new-id)
    :type :prey})
+
+(defn crossover [mother father] ;; add more trait here
+  {})
 
 
 (defn initialize-preys [terrain]
@@ -106,11 +109,12 @@
   (when (and (= :female (:gender prey))
              (:pregnant? prey)
              (>= (:pregnancy prey) (:pregnancy-duration prey-config)))
+    (prn ["CCCC" (:children prey)])
     {:type :spawn
      :actor-id (:id prey)
-     :actor-type :prey
-     :children [(new-prey (select-keys prey [:x :y]))
-                (new-prey (select-keys prey [:x :y]))]}))
+     :children (map (fn [child] (new-prey (merge child (select-keys prey [:x :y]))))
+                    (:children prey))
+     :actor-type :prey}))
 
 (defn interact [prey state] ;; TODO also priority of this could be DNA-encoded
   (let [[mate-id mate] (util/in-same-space (:preys state) prey viable-mate?)
@@ -121,6 +125,8 @@
            (mating? mate)) {:type :mate
                             :actor-id (:id prey)
                             :actor-type :prey
+                            :children [(crossover prey mate)
+                                       (crossover prey mate)]
                             :mate-id mate-id}
       food {:type :eat-food
             :actor-id (:id prey)

@@ -62,7 +62,7 @@
 (defn tick-prey [prey]
   (cond-> prey
     :always (update :hunger inc)
-    :always (update :desire inc)
+    (not (:pregnant? prey)) (update :desire inc)
     (:pregnant? prey) (update :pregnancy (fnil inc 0))))
 
 (defn tick-world [state]
@@ -73,7 +73,7 @@
 
 
 (defn update-state [state]
-  (let [prey-actions (map (fn [[_prey-id prey]] (prey/take-decision prey state))
+  (let [prey-actions (pmap (fn [[_prey-id prey]] (prey/take-decision prey state))
                      (:preys state))
         food-actions (food/replenish-food-txs state)
         actions (concat prey-actions food-actions)]

@@ -1,8 +1,8 @@
 (ns prey.config)
 
 (def debug? false #_ true)
-(def grid-size 100)
-(def unit-size 5)
+(def grid-size 40)
+(def unit-size 10)
 (def world-size (* grid-size unit-size))
 (def sight-radius 5)
 (def fps 20)
@@ -15,10 +15,11 @@
           :initial-density 0.015
           :pregnancy-duration 5
           :starve-at 40
+          :hunger-threshold 10
           :desire-threshold 25
           :direction-inertia 10
           :nutrition 10
           :speed 1}
-   :food {:density 0.01
+   :food {:density 0.02
           :color [35 89 8]
           :lifespan 10}})

@@ -8,12 +8,29 @@
             [prey.util :as util]
             [quil.middleware :as m]))
 
-(defn stats [state]
-  (let [preys (vals (:preys state))
-        males (filter #(= :male (:gender %)) preys)
+(def last-run (atom {}))
+
+(defn save-stats [state]
+  (swap! last-run (fn [a] (if-let [preys (seq (:preys state))]
+                            (update a :preys (fnil conj []) (vals preys))
+                            a)))
+  state)
+
+(defn preys-stats [preys]
+  (let [males (filter #(= :male (:gender %)) preys)
         females (filter #(= :female (:gender %)) preys)]
     {:nmales (count males)
-     :nfemales (count females)}))
+     :nfemales (count females)
+     :population-size (+ (count males)
+                         (count females))
+     :gender-ratio (when (pos? (count females))
+                     (/ (count males)
+                        (count females)))}))
+
+(defn analyze-last-run []
+  (->> (:preys @last-run)
+       (map preys-stats))
+  )
 
 (defn print-preys [state]
   (doseq [[_pid p] (:preys state)]
@@ -36,7 +53,7 @@
     (get-in config/config [(:type being) :pregnant-color])
     (if (:gender being)
       (get-in config/config [(:type being) :color (:gender being)])
-      (get-in config/config [(:type being) :color]))) )
+      (get-in config/config [(:type being) :color]))))
 
 (defn ->size [i] (* i config/unit-size))
 
@@ -51,8 +68,10 @@
    :terrain (terrain/debug-initialize)
    :preys (prey/debug-initialize-preys)})
 
+
 (defn setup []
   (q/frame-rate config/fps)
+  (reset! last-run {})
   (if config/debug?
     (debug-initialize-world)
     (initialize-world)))
@@ -74,14 +93,15 @@
 
 (defn update-state [state]
   (let [prey-actions (pmap (fn [[_prey-id prey]] (prey/take-decision prey state))
-                     (:preys state))
+                           (:preys state))
         food-actions (food/replenish-food-txs state)
         actions (concat prey-actions food-actions)]
     (when config/debug?
       (print-actions actions)
       (print-preys state))
     (-> (reduce actions/resolve-action state actions)
-        (tick-world))))
+        (tick-world)
+        (save-stats))))
 
 ;;; drawing
 
@@ -106,9 +126,6 @@
 (defn draw-state [state]
   (apply q/background config/background-color)
   (draw-terrain state)
-  #_(when (and config/debug?
-             (zero? (mod (q/frame-count) 10)))
-    (print-stats state))
   (doseq [being (concat (vals (:food state))
                         (vals (:preys state)))]
     (let [xx (->size (:x being))
@@ -118,6 +135,8 @@
       (q/rect xx yy config/unit-size config/unit-size)
       (when (and config/debug? (= :prey (:type being)))
         (draw-sight being)))))
+
+
 
 (q/defsketch prey
   :title "Ecosystem"

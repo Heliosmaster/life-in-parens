@@ -2,6 +2,7 @@
   (:require [quil.core :as q]
             [prey.food :as food]
             [prey.prey :as prey]
+            [prey.chart :as chart]
             [prey.actions :as actions]
             [prey.terrain :as terrain]
             [prey.config :as config]
@@ -28,8 +29,10 @@
                         (count females)))}))
 
 (defn analyze-last-run []
-  (->> (:preys @last-run)
-       (map preys-stats))
+  (let [stats (->> (:preys @last-run)
+                   (map preys-stats))]
+    (chart/line-chart {:data (map :population-size stats)
+                       :title "Population"}))
   )
 
 (defn print-preys [state]

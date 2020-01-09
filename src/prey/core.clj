@@ -9,24 +9,34 @@
             [prey.util :as util]
             [quil.middleware :as m]))
 
-(def last-run (atom {}))
+(def initial-live-run {:data []})
+(def initial-last-run {})
+
+(def last-run (atom initial-last-run))
+(def live-run (atom initial-live-run))
+
+(defn preys-stats [preys]
+  (let [males (filter #(= :male (:gender %)) preys)
+        females (filter #(= :female (:gender %)) preys)]
+    {#_ #_ :nmales (count males)
+     #_ #_ :nfemales (count females)
+     :population-size (+ (count males)
+                         (count females))
+     #_ #_ :gender-ratio (when (pos? (count females))
+                     (/ (count males)
+                        (count females)))}))
 
 (defn save-stats [state]
+  (swap! live-run (fn [a] (if-let [preys (seq (:preys state))]
+                            (let [stats (preys-stats (vals preys))]
+                              (update a :data (fnil conj []) (:population-size stats)))
+                            a)))
   (swap! last-run (fn [a] (if-let [preys (seq (:preys state))]
                             (update a :preys (fnil conj []) (vals preys))
                             a)))
   state)
 
-(defn preys-stats [preys]
-  (let [males (filter #(= :male (:gender %)) preys)
-        females (filter #(= :female (:gender %)) preys)]
-    {:nmales (count males)
-     :nfemales (count females)
-     :population-size (+ (count males)
-                         (count females))
-     :gender-ratio (when (pos? (count females))
-                     (/ (count males)
-                        (count females)))}))
+
 
 (defn analyze-last-run []
   (let [stats (->> (:preys @last-run)
@@ -46,7 +56,7 @@
     (clojure.pprint/pprint a)))
 
 (defn print-stats [state]
-  (let [{:keys [nmales nfemales]} (stats state)]
+  (let [{:keys [nmales nfemales]} (preys-stats state)]
     (prn (format "%5d: Male: %5d - Female: %5d - Ratio: %2.2f" (q/frame-count) nmales nfemales (if (and (pos? nmales)
                                                                                                         (pos? nfemales))
                                                                                                  (double (/ nmales nfemales))
@@ -139,9 +149,25 @@
       (when (and config/debug? (= :prey (:type being)))
         (draw-sight being)))))
 
+(defn run []
+  (reset! live-run initial-live-run)
+  (reset! last-run initial-last-run)
+  (q/sketch
+    :title "Ecosystem"
+    :size [config/world-size config/world-size]
+    ; setup function called only once, during sketch initialization.
+    :setup setup
+    ; update-state is called on each iteration before draw-state.
+    :update update-state
+    :draw draw-state
+    :features [:keep-on-top]
+    ; This sketch uses functional-mode middleware.
+    ; Check quil wiki for more info about middlewares and particularly
+    ; fun-mode.
+    :middleware [m/fun-mode])
+  (chart/live-line-chart live-run))
 
-
-(q/defsketch prey
+#_(q/defsketch prey
   :title "Ecosystem"
   :size [config/world-size config/world-size]
   ; setup function called only once, during sketch initialization.

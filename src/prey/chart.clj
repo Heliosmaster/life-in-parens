@@ -37,9 +37,7 @@
       (q/stroke 0)
       (q/stroke 221 219 221)
       (q/line (point 0 (* height s nearest-round)) (point size (* height s nearest-round)))
-      ))
-  )
-
+      )))
 
 
 (defn points [ps width height]
@@ -47,14 +45,16 @@
                  (point (* width i) (* height p)))
                ps))
 
-(defn draw [state]
+(defn draw [options state]
   (q/no-stroke)
   (q/fill 255)
   (q/rect 0 0 total-size total-size)
   (q/fill 255)
   (q/rect offset offset size size)
   (when (seq (:data state))
-    (let [ps (take-last size (:data state)) ;; maybe use subvec
+    (let [ps (if-let [truncate-at (:truncate-at options)]
+               (take-last truncate-at (:data state))  ;; maybe use subvec
+               (:data state))
           #_(adapt-points (:data state))
           width (/ size (count ps))
           max-point (apply max ps)
@@ -84,7 +84,7 @@
     :setup (constantly input)
     ; update-state is called on each iteration before draw-state.
     :update identity
-    :draw draw
+    :draw (partial draw {})
     :features [:keep-on-top]
     ; This sketch uses functional-mode middleware.
     ; Check quil wiki for more info about middlewares and particularly
@@ -101,7 +101,7 @@
     :setup (constantly @input-atom)
     ; update-state is called on each iteration before draw-state.
     :update (fn [_state] (deref input-atom))
-    :draw draw
+    :draw (partial draw {:truncate-at size})
     :features [:keep-on-top]
     ; This sketch uses functional-mode middleware.
     ; Check quil wiki for more info about middlewares and particularly

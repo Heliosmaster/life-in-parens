@@ -32,7 +32,7 @@
         (update-in [:preys (:actor-id action)]
                    (fn [prey]
                      (update prey :hunger (fn [old-hunger]
-                                            (let [new-hunger (- old-hunger (:nutrition prey))]
+                                            (let [new-hunger (- old-hunger (:nutrition action))]
                                               (if (neg? new-hunger) 0 new-hunger))))))
         (update-in [:food] dissoc (:target-id action)))
     state))

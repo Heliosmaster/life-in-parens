@@ -26,7 +26,7 @@
       [x y])))
 
 (defn new-position [source direction]
-  (let [step-length (get-in config/config [(:type source) :speed])
+  (let [step-length (get-in source [:dna :speed])
         deltax (case direction
                  :north 0
                  :east step-length

@@ -7,7 +7,8 @@
             [prey.terrain :as terrain]
             [prey.config :as config]
             [prey.util :as util]
-            [quil.middleware :as m]))
+            [quil.middleware :as m]
+            [clojure.core.async :as async]))
 
 (def initial-live-run {:data []})
 (def initial-last-run {})
@@ -16,12 +17,12 @@
 (def live-run (atom initial-live-run))
 
 (defn preys-stats [preys]
-  (let [males (filter #(= :male (:gender %)) preys)
-        females (filter #(= :female (:gender %)) preys)]
+  (let [#_#_ grouped-genders (group-by :gender preys)
+        #_#_ males (:male grouped-genders)
+        #_#_ females (:female grouped-genders)]
     {#_ #_ :nmales (count males)
      #_ #_ :nfemales (count females)
-     :population-size (+ (count males)
-                         (count females))
+     :population-size (count preys)
      #_ #_ :gender-ratio (when (pos? (count females))
                      (/ (count males)
                         (count females)))}))
@@ -165,7 +166,8 @@
     ; Check quil wiki for more info about middlewares and particularly
     ; fun-mode.
     :middleware [m/fun-mode])
-  (chart/live-line-chart live-run))
+  (async/thread
+    (chart/live-line-chart live-run)))
 
 #_(q/defsketch prey
   :title "Ecosystem"

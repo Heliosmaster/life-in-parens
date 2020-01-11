@@ -6,10 +6,14 @@
 
 (def dna
   {:gestation 0 ;; shorter duration = weaker offspring
-   :senses 0 ;; smaller = shorter sight range (will this work in a highly discretized scenario?)
    :reproductive-urge 0 ;; how much time it will devote to finding a mate vs finding food
+   :food-bites 0 ;; bigger = more time it is idle eating, but more nutrition it gets. NOTE: only work with >1 food chunks.
    :desirability 0 ;; male-only (how much female will like them)
+   :explorer 0 ;; the higher it is, the more directional inertia they will have when moving randomly
    :speed 0 ;; faster = more hungry
+   :longevity 0 ;; longer lifespan, slower metabolism (speed + hunger)
+   :development-phase 0 ;; longer = less time without making children, but stronger individual
+   :litter-size 0 ;; smaller litter, stronger offspring
    })
 
 (defn new-prey [{:keys [x y gender]}]
@@ -17,11 +21,12 @@
    :y y
    :hunger 0
    :desire 0
-   :nutrition (:nutrition prey-config)
-   :direction (rand-nth [:north :south :east :west])
-   :speed (:speed prey-config)
-   :gender (or gender (rand-nth [:male :female]))
+   :dna {:litter-size (:litter-size prey-config)
+         :nutrition (:nutrition prey-config)
+         :speed (:speed prey-config)}
    :direction-inertia (:direction-inertia prey-config)
+   :direction (rand-nth [:north :south :east :west])
+   :gender (or gender (rand-nth [:male :female]))
    :id (util/new-id)
    :type :prey})
 
@@ -112,12 +117,14 @@
            (mating? mate)) {:type :mate
                             :actor-id (:id prey)
                             :actor-type :prey
-                            :children [(crossover prey mate)
-                                       (crossover prey mate)]
+                            :children (repeatedly (get-in prey [:dna :litter-size])
+                                                  #(crossover prey mate))
+
                             :mate-id mate-id}
       (and food
            (hungry? prey)) {:type :eat-food
                             :actor-id (:id prey)
+                            :nutrition (get-in prey [:dna :nutrition])
                             :actor-type :prey
                             :target-id food-id})))
 

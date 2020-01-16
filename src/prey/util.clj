@@ -106,3 +106,15 @@
                                                (not= (:id being) (:id thing))
                                                (filter-fn being thing)))
                   things))))
+
+
+(defn death-probability [age max-age]
+  (/ (* 7 (Math/pow age 6))
+     (Math/pow max-age 7)))
+
+(defn survival-probability [age max-age]
+  (- 1 (death-probability age max-age)))
+
+(defn mean [coll]
+  (/ (reduce + 0 coll)
+     (count coll)))

@@ -10,27 +10,32 @@
             [quil.middleware :as m]
             [clojure.core.async :as async]))
 
-(def initial-live-run {:data []})
+(def initial-live-run {:data {:population-size []
+                              :average-generation []}})
 (def initial-last-run {})
 
 (def last-run (atom initial-last-run))
-(def live-run (atom initial-live-run))
+(def live-stats (atom initial-live-run))
 
 (defn preys-stats [preys]
   (let [#_#_ grouped-genders (group-by :gender preys)
         #_#_ males (:male grouped-genders)
-        #_#_ females (:female grouped-genders)]
-    {#_ #_ :nmales (count males)
-     #_ #_ :nfemales (count females)
+        #_#_ females (:female grouped-genders)
+        generations (map :generation preys)]
+    {#_#_:nmales (count males)
+     #_#_:nfemales (count females)
+     :average-generation (when (seq generations) (util/mean generations))
      :population-size (count preys)
-     #_ #_ :gender-ratio (when (pos? (count females))
-                     (/ (count males)
-                        (count females)))}))
+     #_#_:gender-ratio (when (pos? (count females))
+                         (/ (count males)
+                            (count females)))}))
 
 (defn save-stats [state]
-  (swap! live-run (fn [a] (if-let [preys (seq (:preys state))]
+  (swap! live-stats (fn [a] (if-let [preys (seq (:preys state))]
                             (let [stats (preys-stats (vals preys))]
-                              (update a :data (fnil conj []) (:population-size stats)))
+                              (-> a
+                                  (update-in [:data :population-size] (fnil conj []) (:population-size stats))
+                                  (update-in [:data :average-generation] (fnil conj []) (:average-generation stats))))
                             a)))
   (swap! last-run (fn [a] (if-let [preys (seq (:preys state))]
                             (update a :preys (fnil conj []) (vals preys))
@@ -95,6 +100,7 @@
 (defn tick-prey [prey]
   (cond-> prey
     :always (update :hunger inc)
+    :always (update :age inc)
     (not (:pregnant? prey)) (update :desire inc)
     (:pregnant? prey) (update :pregnancy (fnil inc 0))))
 
@@ -151,7 +157,7 @@
         (draw-sight being)))))
 
 (defn run []
-  (reset! live-run initial-live-run)
+  (reset! live-stats initial-live-run)
   (reset! last-run initial-last-run)
   (q/sketch
     :title "Ecosystem"
@@ -167,7 +173,9 @@
     ; fun-mode.
     :middleware [m/fun-mode])
   (async/thread
-    (chart/live-line-chart live-run)))
+    (chart/live-line-chart live-stats :population-size "Population"))
+  (async/thread
+    (chart/live-line-chart live-stats :average-generation "Avg gen")))
 
 #_(q/defsketch prey
   :title "Ecosystem"

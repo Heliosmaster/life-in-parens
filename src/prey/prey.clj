@@ -4,11 +4,13 @@
 
 (def prey-config (:prey config/config))
 
-(def dna
-  {:gestation 0 ;; shorter duration = weaker offspring
-   :reproductive-urge 0 ;; how much time it will devote to finding a mate vs finding food
-   :food-bites 0 ;; bigger = more time it is idle eating, but more nutrition it gets. NOTE: only work with >1 food chunks.
-   :desirability 0 ;; male-only (how much female will like them)
+(def dna-config
+  {:gestation {:init 0
+               :delta 1} ;; shorter duration = weaker offspring
+   ;; desire replenishment or maybe threshold
+   :reproductive-urge {:init 0} ;; how much time it will devote to finding a mate vs finding food
+   ; :food-bites 0 ;; bigger = more time it is idle eating, but more nutrition it gets. NOTE: only work with >1 food chunks.
+   ; :desirability 0 ;; male-only (how much female will like them) NOTE: REMOVE MAYBE?
    :explorer 0 ;; the higher it is, the more directional inertia they will have when moving randomly
    :speed 0 ;; faster = more hungry
    :longevity 0 ;; longer lifespan, slower metabolism (speed + hunger)
@@ -16,13 +18,16 @@
    :litter-size 0 ;; smaller litter, stronger offspring
    })
 
-(defn new-prey [{:keys [x y gender]}]
+(defn new-prey [{:keys [x y gender generation]}]
   {:x x
    :y y
+   :age 0
+   :generation (if generation (inc generation) 1)
    :hunger 0
    :desire 0
    :dna {:litter-size (:litter-size prey-config)
          :nutrition (:nutrition prey-config)
+         :max-age (:max-age prey-config)
          :speed (:speed prey-config)}
    :direction-inertia (:direction-inertia prey-config)
    :direction (rand-nth [:north :south :east :west])
@@ -30,8 +35,16 @@
    :id (util/new-id)
    :type :prey})
 
-(defn crossover [mother father] ;; add more trait here
-  {})
+(defn select-new-dna [mother father]
+  {:dna (->> (keys (:dna mother))
+             (map (fn [gene]
+                    [gene (rand-nth [(get-in mother [:dna gene])
+                                     (get-in father [:dna gene])])]))
+             (into {}))})
+
+(defn mutate [[gene value]]
+  [gene value]
+  )
 
 
 (defn initialize-preys [terrain]
@@ -92,8 +105,10 @@
     :else (util/move-randomly-tx prey (:terrain state))))
 
 (defn die [prey]
-  (when (>= (:hunger prey)
-            (:starve-at prey-config))
+  (when (or (> (rand)
+               (util/survival-probability (:age prey) (get-in prey [:dna :max-age])))
+            (>= (:hunger prey)
+                (:starve-at prey-config)))
     {:type :die
      :actor-id (:id prey)
      :actor-type :prey}))
@@ -104,7 +119,7 @@
              (>= (:pregnancy prey) (:pregnancy-duration prey-config)))
     {:type :spawn
      :actor-id (:id prey)
-     :children (map (fn [child] (new-prey (merge child (select-keys prey [:x :y]))))
+     :children (map (fn [child] (new-prey (merge child (select-keys prey [:x :y :generation]))))
                     (:children prey))
      :actor-type :prey}))
 
@@ -118,7 +133,7 @@
                             :actor-id (:id prey)
                             :actor-type :prey
                             :children (repeatedly (get-in prey [:dna :litter-size])
-                                                  #(crossover prey mate))
+                                                  #(select-new-dna prey mate))
 
                             :mate-id mate-id}
       (and food

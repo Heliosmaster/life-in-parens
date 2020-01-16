@@ -15,7 +15,10 @@
           :initial-density 0.015
           :pregnancy-duration 5
           :litter-size 2
+          :max-age 400
           :starve-at 40
+          :crossover-probability 0.2
+          :mutation-probability 0.3
           :hunger-threshold 10
           :desire-threshold 25
           :direction-inertia 10

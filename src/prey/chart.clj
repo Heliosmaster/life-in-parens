@@ -51,10 +51,10 @@
   (q/rect 0 0 total-size total-size)
   (q/fill 255)
   (q/rect offset offset size size)
-  (when (seq (:data state))
+  (when (seq state)
     (let [ps (if-let [truncate-at (:truncate-at options)]
-               (take-last truncate-at (:data state))  ;; maybe use subvec
-               (:data state))
+               (take-last truncate-at state)  ;; maybe use subvec
+               state)
           #_(adapt-points (:data state))
           width (/ size (count ps))
           max-point (apply max ps)
@@ -66,9 +66,7 @@
       (q/stroke 255 0 0)
       (doall
         (for [[[x1 y1] [x2 y2]] (partition 2 1 points)]
-          (q/line x1 y1 x2 y2)))
-
-      )))
+          (q/line x1 y1 x2 y2))))))
 
 
 (def test-data
@@ -76,9 +74,9 @@
    :data (range 1050)})
 
 
-(defn line-chart [{:keys [title data] :as input}]
+(defn line-chart [input]
   (q/sketch
-    :title title
+    :title (:title input)
     :size [total-size total-size]
     ; setup function called only once, during sketch initialization.
     :setup (constantly input)
@@ -93,14 +91,14 @@
   )
 
 
-(defn live-line-chart [input-atom]
+(defn live-line-chart [input-atom plot-key title]
   (q/sketch
-    :title (:title @input-atom)
+    :title title
     :size [total-size total-size]
     ; setup function called only once, during sketch initialization.
-    :setup (constantly @input-atom)
+    :setup (constantly (get @input-atom plot-key))
     ; update-state is called on each iteration before draw-state.
-    :update (fn [_state] (deref input-atom))
+    :update (fn [_state] (get-in (deref input-atom) [:data plot-key]))
     :draw (partial draw {:truncate-at size})
     :features [:keep-on-top]
     ; This sketch uses functional-mode middleware.

@@ -25,8 +25,8 @@
           new-dataset)))
     data))
 
-(defn draw-size-lines [max-point height]
-  (let [c 10
+(defn draw-size-lines [{:keys [max-point height rounding-at]}]
+  (let [c rounding-at
         nearest-round (* c (quot (quot max-point nlines)
                                    c))
         nearest-round (if (zero? nearest-round) c nearest-round)
@@ -61,17 +61,51 @@
           height (/ size max-point)
           points (points ps width height)]
 
-      (when max-point (draw-size-lines max-point height))
+      (when max-point (draw-size-lines {:max-point max-point
+                                        :height height
+                                        :rounding-at (:rounding-at options)}))
       (q/stroke-weight 1)
       (q/stroke 255 0 0)
       (doall
         (for [[[x1 y1] [x2 y2]] (partition 2 1 points)]
           (q/line x1 y1 x2 y2))))))
 
+(defn draw-min-max-avg [options state]
+  (q/no-stroke)
+  (q/fill 255)
+  (q/rect 0 0 total-size total-size)
+  (q/fill 255)
+  (q/rect offset offset size size)
+  (when (seq state)
+    (let [point-sets (if-let [truncate-at (:truncate-at options)]
+                       (take-last truncate-at state)  ;; maybe use subvec
+                       state)
+          mins (map :min point-sets)
+          maxs (map :max point-sets)
+          avgs (map :avg point-sets)
+          width (/ size (count point-sets))
+          max-point (apply max maxs)
+          height (/ size max-point)
+          min-points (points mins width height)
+          max-points (points maxs width height)
+          avg-points (points avgs width height)]
 
-(def test-data
-  {:title "Test"
-   :data (range 1050)})
+      (when max-point (draw-size-lines {:max-point max-point
+                                        :height height
+                                        :rounding-at (:rounding-at options)}))
+      (q/stroke-weight 1)
+      (q/stroke 255 0 0)
+      (doall
+        (for [[[x1 y1] [x2 y2]] (partition 2 1 avg-points)]
+          (q/line x1 y1 x2 y2)))
+      (q/stroke 0 255 0)
+      (doall
+        (for [[[x1 y1] [x2 y2]] (partition 2 1 min-points)]
+          (q/line x1 y1 x2 y2)))
+      (q/stroke 0 0 255)
+      (doall
+        (for [[[x1 y1] [x2 y2]] (partition 2 1 max-points)]
+          (q/line x1 y1 x2 y2))))))
 
 
 (defn line-chart [input]
@@ -91,15 +125,31 @@
   )
 
 
-(defn live-line-chart [input-atom plot-key title]
+(defn live-line-chart [input-atom plot-key options]
   (q/sketch
-    :title title
+    :title (:title options)
     :size [total-size total-size]
     ; setup function called only once, during sketch initialization.
     :setup (constantly (get @input-atom plot-key))
     ; update-state is called on each iteration before draw-state.
     :update (fn [_state] (get-in (deref input-atom) [:data plot-key]))
-    :draw (partial draw {:truncate-at size})
+    :draw (partial draw (merge options {:truncate-at size}))
+    :features [:keep-on-top]
+    ; This sketch uses functional-mode middleware.
+    ; Check quil wiki for more info about middlewares and particularly
+    ; fun-mode.
+    :middleware [m/fun-mode])
+  )
+
+(defn live-min-max-avg-chart [input-atom plot-key options]
+  (q/sketch
+    :title (:title options)
+    :size [total-size total-size]
+    ; setup function called only once, during sketch initialization.
+    :setup (constantly (get @input-atom plot-key))
+    ; update-state is called on each iteration before draw-state.
+    :update (fn [_state] (get-in (deref input-atom) [:data plot-key]))
+    :draw (partial draw-min-max-avg (merge options {:truncate-at size}))
     :features [:keep-on-top]
     ; This sketch uses functional-mode middleware.
     ; Check quil wiki for more info about middlewares and particularly

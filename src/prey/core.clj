@@ -11,7 +11,7 @@
             [clojure.core.async :as async]))
 
 (def initial-live-run {:data {:population-size []
-                              :average-generation []}})
+                              :generation []}})
 (def initial-last-run {})
 
 (def last-run (atom initial-last-run))
@@ -24,7 +24,9 @@
         generations (map :generation preys)]
     {#_#_:nmales (count males)
      #_#_:nfemales (count females)
-     :average-generation (when (seq generations) (util/mean generations))
+     :generation (when (seq generations) {:avg (util/mean generations)
+                                          :min (apply min generations)
+                                          :max (apply max generations)})
      :population-size (count preys)
      #_#_:gender-ratio (when (pos? (count females))
                          (/ (count males)
@@ -35,7 +37,7 @@
                             (let [stats (preys-stats (vals preys))]
                               (-> a
                                   (update-in [:data :population-size] (fnil conj []) (:population-size stats))
-                                  (update-in [:data :average-generation] (fnil conj []) (:average-generation stats))))
+                                  (update-in [:data :generation] (fnil conj []) (:generation stats))))
                             a)))
   (swap! last-run (fn [a] (if-let [preys (seq (:preys state))]
                             (update a :preys (fnil conj []) (vals preys))
@@ -173,9 +175,11 @@
     ; fun-mode.
     :middleware [m/fun-mode])
   (async/thread
-    (chart/live-line-chart live-stats :population-size "Population"))
+    (chart/live-line-chart live-stats :population-size {:title "Population"
+                                                        :rounding-at 10}))
   (async/thread
-    (chart/live-line-chart live-stats :average-generation "Avg gen")))
+    (chart/live-min-max-avg-chart live-stats :generation {:title "Generations"
+                                                          :rounding-at 1})))
 
 #_(q/defsketch prey
   :title "Ecosystem"

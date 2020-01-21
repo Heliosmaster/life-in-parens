@@ -17,17 +17,22 @@
 (def last-run (atom initial-last-run))
 (def live-stats (atom initial-live-run))
 
+(defn triplet [quantity-seq]
+  {:avg (util/mean quantity-seq)
+   :min (apply min quantity-seq)
+   :max (apply max quantity-seq)})
+
 (defn preys-stats [preys]
   (let [#_#_ grouped-genders (group-by :gender preys)
         #_#_ males (:male grouped-genders)
         #_#_ females (:female grouped-genders)
-        generations (map :generation preys)]
+        generations (map :generation preys)
+        energies (map :energy preys)]
     {#_#_:nmales (count males)
      #_#_:nfemales (count females)
-     :generation (when (seq generations) {:avg (util/mean generations)
-                                          :min (apply min generations)
-                                          :max (apply max generations)})
+     :generation (when (seq generations) (triplet generations))
      :population-size (count preys)
+     :energies (when (seq energies) (triplet energies))
      #_#_:gender-ratio (when (pos? (count females))
                          (/ (count males)
                             (count females)))}))
@@ -37,7 +42,8 @@
                             (let [stats (preys-stats (vals preys))]
                               (-> a
                                   (update-in [:data :population-size] (fnil conj []) (:population-size stats))
-                                  (update-in [:data :generation] (fnil conj []) (:generation stats))))
+                                  (update-in [:data :generation] (fnil conj []) (:generation stats))
+                                  (update-in [:data :energies] (fnil conj []) (:energies stats))))
                             a)))
   (swap! last-run (fn [a] (if-let [preys (seq (:preys state))]
                             (update a :preys (fnil conj []) (vals preys))
@@ -54,12 +60,14 @@
   )
 
 (defn print-preys [state]
+  (prn "PREYS: ")
   (doseq [[_pid p] (:preys state)]
     (clojure.pprint/pprint p)))
 
 (defn print-actions [actions]
   (prn "------------")
   (prn (q/frame-count))
+  (prn "ACTIONS: ")
   (doseq [a actions]
     (clojure.pprint/pprint a)))
 
@@ -101,7 +109,7 @@
 
 (defn tick-prey [prey]
   (cond-> prey
-    :always (update :hunger inc)
+    :always (update :energy dec)
     :always (update :age inc)
     (not (:pregnant? prey)) (update :desire inc)
     (:pregnant? prey) (update :pregnancy (fnil inc 0))))
@@ -178,8 +186,8 @@
     (chart/live-line-chart live-stats :population-size {:title "Population"
                                                         :rounding-at 10}))
   (async/thread
-    (chart/live-min-max-avg-chart live-stats :generation {:title "Generations"
-                                                          :rounding-at 1})))
+    (chart/live-min-max-avg-chart live-stats :energies {:title "Energies"
+                                                        :rounding-at 1})))
 
 #_(q/defsketch prey
   :title "Ecosystem"

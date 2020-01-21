@@ -23,10 +23,9 @@
    :y y
    :age 0
    :generation (if generation (inc generation) 1)
-   :hunger 0
+   :energy (:initial-energy prey-config)
    :desire 0
    :dna {:litter-size (:litter-size prey-config)
-         :starve-at (:starve-at prey-config)
          :gestation (:gestation prey-config)
          :nutrition (:nutrition prey-config)
          :max-age (:max-age prey-config)
@@ -83,8 +82,8 @@
       (:desire-threshold prey-config)))
 
 (defn hungry? [prey]
-  (>= (:hunger prey)
-      (:hunger-threshold prey-config)))
+  (<= (:energy prey)
+      (:energy-threshold prey-config)))
 
 (defn find-mate-tx [prey state]
   (when (mating? prey)
@@ -109,7 +108,7 @@
 (defn die [prey]
   (when (or (> (rand)
                (util/survival-probability (:age prey) (get-in prey [:dna :max-age])))
-            (>= (:hunger prey) (get-in prey [:dna :starve-at])))
+            (zero? (:energy prey)))
     {:type :die
      :actor-id (:id prey)
      :actor-type :prey}))

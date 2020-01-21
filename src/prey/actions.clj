@@ -31,9 +31,9 @@
     (-> state
         (update-in [:preys (:actor-id action)]
                    (fn [prey]
-                     (update prey :hunger (fn [old-hunger]
-                                            (let [new-hunger (- old-hunger (:nutrition action))]
-                                              (if (neg? new-hunger) 0 new-hunger))))))
+                     (-> prey
+                         (update :energy + (:nutrition action)) ;; TODO no max-energy for now
+                         )))
         (update-in [:food] dissoc (:target-id action)))
     state))
 

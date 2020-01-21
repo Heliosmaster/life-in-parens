@@ -11,7 +11,9 @@
             [clojure.core.async :as async]))
 
 (def initial-live-run {:data {:population-size []
-                              :generation []}})
+                              :generation []
+                              :energies []
+                              :last-tick 0}})
 (def initial-last-run {})
 
 (def last-run (atom initial-last-run))
@@ -41,6 +43,7 @@
   (swap! live-stats (fn [a] (if-let [preys (seq (:preys state))]
                             (let [stats (preys-stats (vals preys))]
                               (-> a
+                                  (assoc-in [:data :last-tick] (q/frame-count))
                                   (update-in [:data :population-size] (fnil conj []) (:population-size stats))
                                   (update-in [:data :generation] (fnil conj []) (:generation stats))
                                   (update-in [:data :energies] (fnil conj []) (:energies stats))))
@@ -56,7 +59,8 @@
   (let [stats (->> (:preys @last-run)
                    (map preys-stats))]
     (chart/line-chart {:data (map :population-size stats)
-                       :title "Population"}))
+                       :title "Population"}
+                      {}))
   )
 
 (defn print-preys [state]

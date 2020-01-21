@@ -108,7 +108,7 @@
 (defn die [prey]
   (when (or (> (rand)
                (util/survival-probability (:age prey) (get-in prey [:dna :max-age])))
-            (zero? (:energy prey)))
+            (<= (:energy prey) 0))
     {:type :die
      :actor-id (:id prey)
      :actor-type :prey}))

@@ -3,6 +3,7 @@
             [quil.middleware :as m]))
 
 (def offset 50)
+(def vlines-at 250)
 (def size 500)
 (def nlines 5)
 (def total-size (+ size (* 2 offset)))
@@ -28,7 +29,7 @@
 (defn draw-size-lines [{:keys [max-point height rounding-at]}]
   (let [c rounding-at
         nearest-round (* c (quot (quot max-point nlines)
-                                   c))
+                                 c))
         nearest-round (if (zero? nearest-round) c nearest-round)
         lines (quot max-point nearest-round)]
     (doseq [s (range (inc lines))]
@@ -39,28 +40,42 @@
       (q/line (point 0 (* height s nearest-round)) (point size (* height s nearest-round)))
       )))
 
+(defn draw-vertical-lines [{:keys [truncate-at]} last-tick]
+  (let [first-tick (- last-tick truncate-at)
+        last-line (quot last-tick vlines-at)
+        first-line (inc (quot first-tick vlines-at))
+        lines (map #(* vlines-at %) (range first-line (inc last-line)))]
+    (doseq [l lines]
+      (q/fill 0)
+      (q/text (str l) (+ offset (- l first-tick 10)) (- total-size 20))
+      (q/stroke 221 219 221)
+      (q/line (point (- l first-tick) 0)
+              (point (- l first-tick) size))))
+  )
 
 (defn points [ps width height]
   (map-indexed (fn [i p]
                  (point (* width i) (* height p)))
                ps))
 
-(defn draw [options state]
+(defn draw [options {:keys [data last-tick]}]
   (q/no-stroke)
   (q/fill 255)
   (q/rect 0 0 total-size total-size)
   (q/fill 255)
   (q/rect offset offset size size)
-  (when (seq state)
+  (when (seq data)
     (let [ps (if-let [truncate-at (:truncate-at options)]
-               (take-last truncate-at state)  ;; maybe use subvec
-               state)
-          #_(adapt-points (:data state))
+               (take-last truncate-at data) ;; maybe use subvec
+               data)
+          #_(adapt-points (:data data))
           width (/ size (count ps))
           max-point (apply max ps)
           height (/ size max-point)
           points (points ps width height)]
-
+      (when (and (:truncate-at options)
+                 (>= last-tick (:truncate-at options)))
+        (draw-vertical-lines options last-tick))
       (when max-point (draw-size-lines {:max-point max-point
                                         :height height
                                         :rounding-at (:rounding-at options)}))
@@ -70,16 +85,16 @@
         (for [[[x1 y1] [x2 y2]] (partition 2 1 points)]
           (q/line x1 y1 x2 y2))))))
 
-(defn draw-min-max-avg [options state]
+(defn draw-min-max-avg [options {:keys [data last-tick]}]
   (q/no-stroke)
   (q/fill 255)
   (q/rect 0 0 total-size total-size)
   (q/fill 255)
   (q/rect offset offset size size)
-  (when (seq state)
+  (when (seq data)
     (let [point-sets (if-let [truncate-at (:truncate-at options)]
-                       (take-last truncate-at state)  ;; maybe use subvec
-                       state)
+                       (take-last truncate-at data) ;; maybe use subvec
+                       data)
           mins (map :min point-sets)
           maxs (map :max point-sets)
           avgs (map :avg point-sets)
@@ -89,7 +104,9 @@
           min-points (points mins width height)
           max-points (points maxs width height)
           avg-points (points avgs width height)]
-
+      (when (and (:truncate-at options)
+                 (>= last-tick (:truncate-at options)))
+        (draw-vertical-lines options last-tick))
       (when max-point (draw-size-lines {:max-point max-point
                                         :height height
                                         :rounding-at (:rounding-at options)}))
@@ -107,8 +124,13 @@
         (for [[[x1 y1] [x2 y2]] (partition 2 1 max-points)]
           (q/line x1 y1 x2 y2))))))
 
+(def lim 1002)
 
-(defn line-chart [input]
+(def test-data
+  {:data (range 1 lim)
+   :last-tick lim})
+
+(defn test-line-chart [input]
   (q/sketch
     :title (:title input)
     :size [total-size total-size]
@@ -116,7 +138,24 @@
     :setup (constantly input)
     ; update-state is called on each iteration before draw-state.
     :update identity
-    :draw (partial draw {})
+    :draw (partial draw {:rounding-at 1
+                         :truncate-at size})
+    :features [:keep-on-top]
+    ; This sketch uses functional-mode middleware.
+    ; Check quil wiki for more info about middlewares and particularly
+    ; fun-mode.
+    :middleware [m/fun-mode])
+  )
+
+(defn line-chart [input options]
+  (q/sketch
+    :title (:title input)
+    :size [total-size total-size]
+    ; setup function called only once, during sketch initialization.
+    :setup (constantly input)
+    ; update-state is called on each iteration before draw-state.
+    :update identity
+    :draw (partial draw (merge options {}))
     :features [:keep-on-top]
     ; This sketch uses functional-mode middleware.
     ; Check quil wiki for more info about middlewares and particularly
@@ -132,7 +171,8 @@
     ; setup function called only once, during sketch initialization.
     :setup (constantly (get @input-atom plot-key))
     ; update-state is called on each iteration before draw-state.
-    :update (fn [_state] (get-in (deref input-atom) [:data plot-key]))
+    :update (fn [_state] {:data (get-in (deref input-atom) [:data plot-key])
+                          :last-tick (get-in (deref input-atom) [:data :last-tick])})
     :draw (partial draw (merge options {:truncate-at size}))
     :features [:keep-on-top]
     ; This sketch uses functional-mode middleware.
@@ -148,7 +188,8 @@
     ; setup function called only once, during sketch initialization.
     :setup (constantly (get @input-atom plot-key))
     ; update-state is called on each iteration before draw-state.
-    :update (fn [_state] (get-in (deref input-atom) [:data plot-key]))
+    :update (fn [_state] {:data (get-in (deref input-atom) [:data plot-key])
+                          :last-tick (get-in (deref input-atom) [:data :last-tick])})
     :draw (partial draw-min-max-avg (merge options {:truncate-at size}))
     :features [:keep-on-top]
     ; This sketch uses functional-mode middleware.

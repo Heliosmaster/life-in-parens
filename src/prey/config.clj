@@ -14,6 +14,7 @@
           :pregnant-color [255 0 0]
           :initial-density 0.015
           :pregnancy-duration 5
+          :gestation 5
           :litter-size 2
           :max-age 400
           :starve-at 40

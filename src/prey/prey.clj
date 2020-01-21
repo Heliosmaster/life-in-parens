@@ -26,6 +26,8 @@
    :hunger 0
    :desire 0
    :dna {:litter-size (:litter-size prey-config)
+         :starve-at (:starve-at prey-config)
+         :gestation (:gestation prey-config)
          :nutrition (:nutrition prey-config)
          :max-age (:max-age prey-config)
          :speed (:speed prey-config)}
@@ -107,8 +109,7 @@
 (defn die [prey]
   (when (or (> (rand)
                (util/survival-probability (:age prey) (get-in prey [:dna :max-age])))
-            (>= (:hunger prey)
-                (:starve-at prey-config)))
+            (>= (:hunger prey) (get-in prey [:dna :starve-at])))
     {:type :die
      :actor-id (:id prey)
      :actor-type :prey}))
@@ -116,7 +117,7 @@
 (defn give-birth [prey]
   (when (and (= :female (:gender prey))
              (:pregnant? prey)
-             (>= (:pregnancy prey) (:pregnancy-duration prey-config)))
+             (>= (:pregnancy prey) (get-in prey [:dna :gestation])))
     {:type :spawn
      :actor-id (:id prey)
      :children (map (fn [child] (new-prey (merge child (select-keys prey [:x :y :generation]))))

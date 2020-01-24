@@ -83,9 +83,9 @@
        :destination (new-position source (rand-nth valid-directions))}
       (move-randomly-tx source terrain))))
 
-(defn closest
+(defn around
   ([things being]
-   (closest things being (constantly true)))
+   (around things being (constantly true)))
   ([things being filter-fn]
    (let [s (sight-box being)
          seen-things (filter (fn [[_id thing]]
@@ -93,9 +93,15 @@
                                     (<= (:ymin s) (:y thing) (:ymax s))
                                     (not= thing being)
                                     (filter-fn being thing)))
-                             things)]
-     (first (sort-by (fn [[_id thing]] (distance being thing))
-                     seen-things)))))
+                       things)]
+     seen-things)))
+
+(defn closest
+  ([things being]
+   (closest things being (constantly true)))
+  ([things being filter-fn]
+   (first (sort-by (fn [[_id thing]] (distance being thing))
+                   (around things being filter-fn)))))
 
 (defn in-same-space
   ([things being]

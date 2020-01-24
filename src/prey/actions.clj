@@ -25,15 +25,23 @@
                           (= :female (:gender prey)) (merge {:pregnant? true
                                                              :children (:children action)})))))
 
+(defn eat-while-pregnant [prey action]
+  (-> prey
+      (update :energy + (- (:nutrition action)
+                           (count (:children prey))))
+      (update :children (fn [children] (map (fn [child] (update child :energy inc))
+                                            children)))))
+
 (defmethod resolve-action [:prey :eat-food]
   [state action]
   (if (get-in state [:food (:target-id action)])
     (-> state
         (update-in [:preys (:actor-id action)]
                    (fn [prey]
-                     (-> prey
-                         (update :energy + (:nutrition action)) ;; TODO no max-energy for now
-                         )))
+                     (if (:pregnant? prey)
+                       (eat-while-pregnant prey action)
+                       (update prey :energy + (:nutrition action)))
+                     ))
         (update-in [:food] dissoc (:target-id action)))
     state))
 
@@ -42,6 +50,7 @@
   (-> state
       (assoc-in [:preys (:actor-id action) :pregnant?] false)
       (assoc-in [:preys (:actor-id action) :pregnancy] 0)
+      (update-in [:preys (:actor-id action)] dissoc :children)
       (update-in [:preys] merge (->> (:children action)
                                      (map (juxt :id identity))
                                      (into {})))))

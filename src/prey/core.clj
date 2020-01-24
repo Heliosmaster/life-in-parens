@@ -24,20 +24,25 @@
    :min (apply min quantity-seq)
    :max (apply max quantity-seq)})
 
+(defn average-dna [preys]
+  (let [dnas (map :dna preys)
+        total-dnas (reduce (fn [acc dna]
+                              (reduce (fn [acc [gene value]]
+                                        (if (boolean? value)
+                                          (update acc gene conj (if value 1.0 0.0))
+                                          (update acc gene conj value))) acc dna))
+                            {}
+                            dnas)]
+    (->> total-dnas
+         (map (fn [[gene values]] [gene (util/mean values)]))
+         (into {}))))
+
 (defn preys-stats [preys]
-  (let [#_#_ grouped-genders (group-by :gender preys)
-        #_#_ males (:male grouped-genders)
-        #_#_ females (:female grouped-genders)
-        generations (map :generation preys)
+  (let [generations (map :generation preys)
         energies (map :energy preys)]
-    {#_#_:nmales (count males)
-     #_#_:nfemales (count females)
-     :generation (when (seq generations) (triplet generations))
+    {:generation (when (seq generations) (triplet generations))
      :population-size (count preys)
-     :energies (when (seq energies) (triplet energies))
-     #_#_:gender-ratio (when (pos? (count females))
-                         (/ (count males)
-                            (count females)))}))
+     :energies (when (seq energies) (triplet energies))}))
 
 (defn save-stats [state]
   (swap! live-stats (fn [a] (if-let [preys (seq (:preys state))]

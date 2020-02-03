@@ -27,12 +27,12 @@
 (defn average-dna [preys]
   (let [dnas (map :dna preys)
         total-dnas (reduce (fn [acc dna]
-                              (reduce (fn [acc [gene value]]
-                                        (if (boolean? value)
-                                          (update acc gene conj (if value 1.0 0.0))
-                                          (update acc gene conj value))) acc dna))
-                            {}
-                            dnas)]
+                             (reduce (fn [acc [gene value]]
+                                       (if (boolean? value)
+                                         (update acc gene conj (if value 1.0 0.0))
+                                         (update acc gene conj value))) acc dna))
+                           {}
+                           dnas)]
     (->> total-dnas
          (map (fn [[gene values]] [gene (util/mean values)]))
          (into {}))))
@@ -46,13 +46,13 @@
 
 (defn save-stats [state]
   (swap! live-stats (fn [a] (if-let [preys (seq (:preys state))]
-                            (let [stats (preys-stats (vals preys))]
-                              (-> a
-                                  (assoc-in [:data :last-tick] (q/frame-count))
-                                  (update-in [:data :population-size] (fnil conj []) (:population-size stats))
-                                  (update-in [:data :generation] (fnil conj []) (:generation stats))
-                                  (update-in [:data :energies] (fnil conj []) (:energies stats))))
-                            a)))
+                              (let [stats (preys-stats (vals preys))]
+                                (-> a
+                                    (assoc-in [:data :last-tick] (q/frame-count))
+                                    (update-in [:data :population-size] (fnil conj []) (:population-size stats))
+                                    (update-in [:data :generation] (fnil conj []) (:generation stats))
+                                    (update-in [:data :energies] (fnil conj []) (:energies stats))))
+                              a)))
   (swap! last-run (fn [a] (if-let [preys (seq (:preys state))]
                             (update a :preys (fnil conj []) (vals preys))
                             a)))
@@ -194,20 +194,20 @@
   (async/thread
     (chart/live-line-chart live-stats :population-size {:title "Population"
                                                         :rounding-at 10}))
-  (async/thread
-    (chart/live-min-max-avg-chart live-stats :energies {:title "Energies"
-                                                        :rounding-at 1})))
+  #_(async/thread
+      (chart/live-min-max-avg-chart live-stats :energies {:title "Energies"
+                                                          :rounding-at 1})))
 
 #_(q/defsketch prey
-  :title "Ecosystem"
-  :size [config/world-size config/world-size]
-  ; setup function called only once, during sketch initialization.
-  :setup setup
-  ; update-state is called on each iteration before draw-state.
-  :update update-state
-  :draw draw-state
-  :features [:keep-on-top]
-  ; This sketch uses functional-mode middleware.
-  ; Check quil wiki for more info about middlewares and particularly
-  ; fun-mode.
-  :middleware [m/fun-mode])
+    :title "Ecosystem"
+    :size [config/world-size config/world-size]
+    ; setup function called only once, during sketch initialization.
+    :setup setup
+    ; update-state is called on each iteration before draw-state.
+    :update update-state
+    :draw draw-state
+    :features [:keep-on-top]
+    ; This sketch uses functional-mode middleware.
+    ; Check quil wiki for more info about middlewares and particularly
+    ; fun-mode.
+    :middleware [m/fun-mode])

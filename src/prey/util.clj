@@ -25,63 +25,87 @@
       (viable-random-position terrain grid-size)
       [x y])))
 
-(defn new-position [source direction]
-  (let [step-length (get-in source [:dna :speed])
-        deltax (case direction
+(defn take-one-step [{:keys [x y] :as _position} direction]
+  (let [deltax (case direction
                  :north 0
-                 :east step-length
+                 :east 1
                  :south 0
-                 :west (- step-length))
+                 :west (- 1))
         deltay (case direction
-                 :north (- step-length)
+                 :north (- 1)
                  :east 0
-                 :south step-length
+                 :south 1
                  :west 0)]
-    {:x (+ (:x source) deltax)
-     :y (+ (:y source) deltay)}))
+    {:x (+ x deltax)
+     :y (+ y deltay)}))
 
-(defn valid-direction? [source direction terrain]
-  (let [new-pos (new-position source direction)]
+(defn valid-direction? [position direction terrain]
+  (let [new-pos (take-one-step position direction)]
     (and (<= 0 (:x new-pos) (dec config/grid-size))
          (<= 0 (:y new-pos) (dec config/grid-size))
          (not (contains? terrain [(:x new-pos) (:y new-pos)])))))
 
 (defn move-randomly-tx [source terrain]
-  (let [valid-directions (filter #(valid-direction? source % terrain)
-                                 [:north :south :east :west])
-        current-direction (:direction source)]
-    (if (seq valid-directions)
-      (let [new-direction (if (and (contains? (set valid-directions) current-direction)
-                                   (pos? (:direction-inertia source)))
-                            current-direction
-                            (rand-nth valid-directions))
-            new-inertia (if (= current-direction new-direction)
-                          (dec (:direction-inertia source))
-                          (get-in config/config [(:type source) :direction-inertia]))]
-        {:type :move
-         :actor-id (:id source)
-         :actor-type (:type source)
-         :destination (new-position source new-direction)
-         :direction new-direction
-         :new-inertia new-inertia})
-      {:type :wait
-       :actor-id (:id source)})))
+  (loop [step-n 1
+         direction-inertia (:direction-inertia source)
+         current-direction (:direction source)
+         position (select-keys source [:x :y])]
+    (let [valid-directions (filter #(valid-direction? position % terrain)
+                             [:north :south :east :west])]
+      (if (seq valid-directions)
+        (let [new-direction (if (and (contains? (set valid-directions) current-direction)
+                                     (pos? direction-inertia))
+                              current-direction
+                              (rand-nth valid-directions))
+              new-inertia (if (= current-direction new-direction)
+                            (dec direction-inertia)
+                            (get-in config/config [(:type source) :direction-inertia]))
+              new-pos (take-one-step source new-direction)]
+          (if (= step-n (get-in source [:dna :speed]))
+            {:type :move
+             :actor-id (:id source)
+             :actor-type (:type source)
+             :destination new-pos
+             :direction new-direction
+             :new-inertia new-inertia}
+            (recur (inc step-n)
+                   new-inertia
+                   new-direction
+                   new-pos)))
+        (if (= position (select-keys source [:x :y]))
+          {:type :wait
+           :actor-id (:id source)}
+          {:type :move
+           :actor-id (:id source)
+           :actor-type (:type source)
+           :destination position
+           :direction current-direction
+           :new-inertia direction-inertia})))))
 
 (defn move-towards-tx [source target terrain]
-  (let [directions (cond-> []
-                     (pos? (- (:x target) (:x source))) (conj :east)
-                     (neg? (- (:x target) (:x source))) (conj :west)
-                     (pos? (- (:y target) (:y source))) (conj :south)
-                     (neg? (- (:y target) (:y source))) (conj :north))
-        valid-directions (filter #(valid-direction? source % terrain)
-                                 directions)]
-
-    (if (seq valid-directions)
-      {:type :move
-       :actor-id (:id source)
-       :actor-type (:type source)
-       :destination (new-position source (rand-nth valid-directions))}
-      (move-randomly-tx source terrain))))
+  (loop [step-n 1
+         new-source source]
+    (let [{:keys [x y]} new-source
+          there? (and (= (:x target) x)
+                      (= (:y target) y))
+          position {:x x :y y}
+          directions (cond-> []
+                       (pos? (- (:x target) x)) (conj :east)
+                       (neg? (- (:x target) x)) (conj :west)
+                       (pos? (- (:y target) y)) (conj :south)
+                       (neg? (- (:y target) y)) (conj :north))
+          valid-directions (filter #(valid-direction? position % terrain)
+                             directions)
+          move-tx {:type :move
+                   :actor-id (:id new-source)
+                   :actor-type (:type new-source)}]
+      (cond
+        there? (assoc move-tx :destination position)
+        (seq valid-directions) (let [new-pos (take-one-step position (rand-nth valid-directions))]
+                                 (if (= step-n (get-in new-source [:dna :speed]))
+                                   (assoc move-tx :destination new-pos)
+                                   (recur (inc step-n) (merge new-source new-pos))))
+        :else (move-randomly-tx new-source terrain)))))
 
 (defn around
   ([things being]

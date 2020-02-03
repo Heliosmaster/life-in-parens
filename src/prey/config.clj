@@ -28,6 +28,6 @@
           :direction-inertia 10
           :nutrition 20
           :speed 1}
-   :food {:density 0.03
+   :food {:density 0.02
           :color [35 89 8]
           :lifespan 10}})

@@ -8,8 +8,6 @@
 (def fps (if debug? 1 20))
 (def background-color [137 125 123])
 
-(def max-value 1024)
-
 (def config
   {:prey {:color {:male [204 230 255]
                   :female [255 179 230]}
@@ -22,7 +20,7 @@
           :max-age 400
           :competition-threshold 3
           :crossover-probability 0.2
-          :mutation-probability 0.3
+          :mutation-probability 0.1
           :energy-threshold 100
           :desire-threshold 25
           :direction-inertia 10

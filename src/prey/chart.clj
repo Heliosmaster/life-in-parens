@@ -40,7 +40,7 @@
       (q/line (point 0 (* height s nearest-round)) (point size (* height s nearest-round)))
       )))
 
-(defn draw-vertical-lines [{:keys [truncate-at]} last-tick]
+(defn draw-vertical-lines [truncate-at last-tick]
   (let [first-tick (- last-tick truncate-at)
         last-line (quot last-tick vlines-at)
         first-line (inc (quot first-tick vlines-at))
@@ -58,27 +58,27 @@
                  (point (* width i) (* height p)))
                ps))
 
-(defn draw [options {:keys [data last-tick]}]
+(defn draw [{:keys [truncate-at adapt? rounding-at] :as _options} {:keys [data last-tick]}]
   (q/no-stroke)
   (q/fill 255)
   (q/rect 0 0 total-size total-size)
   (q/fill 255)
   (q/rect offset offset size size)
   (when (seq data)
-    (let [ps (if-let [truncate-at (:truncate-at options)]
-               (take-last truncate-at data) ;; maybe use subvec
-               data)
-          #_(adapt-points (:data data))
+    (let [ps (cond
+               truncate-at (take-last truncate-at data) ;; maybe use subvec) (if-let [truncate-at (:truncate-at options)]
+               adapt? (adapt-points data)
+               :else data)
           width (/ size (count ps))
           max-point (apply max ps)
           height (/ size max-point)
           points (points ps width height)]
-      (when (and (:truncate-at options)
-                 (>= last-tick (:truncate-at options)))
-        (draw-vertical-lines options last-tick))
+      (when (and truncate-at
+                 (>= last-tick truncate-at))
+        (draw-vertical-lines truncate-at last-tick))
       (when max-point (draw-size-lines {:max-point max-point
                                         :height height
-                                        :rounding-at (:rounding-at options)}))
+                                        :rounding-at (or rounding-at 1)}))
       (q/stroke-weight 1)
       (q/stroke 255 0 0)
       (doall
@@ -106,10 +106,10 @@
           avg-points (points avgs width height)]
       (when (and (:truncate-at options)
                  (>= last-tick (:truncate-at options)))
-        (draw-vertical-lines options last-tick))
+        (draw-vertical-lines (:truncate-at options) last-tick))
       (when max-point (draw-size-lines {:max-point max-point
                                         :height height
-                                        :rounding-at (:rounding-at options)}))
+                                        :rounding-at (or (:rounding-at options) 1)}))
       (q/stroke-weight 1)
       (q/stroke 255 0 0)
       (doall
@@ -149,7 +149,7 @@
 
 (defn line-chart [input options]
   (q/sketch
-    :title (:title input)
+    :title (:title options)
     :size [total-size total-size]
     ; setup function called only once, during sketch initialization.
     :setup (constantly input)

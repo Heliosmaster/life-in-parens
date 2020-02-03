@@ -8,7 +8,8 @@
             [prey.config :as config]
             [prey.util :as util]
             [quil.middleware :as m]
-            [clojure.core.async :as async]))
+            [clojure.core.async :as async]
+            [clojure.string :as str]))
 
 (def initial-live-run {:data {:population-size []
                               :generation []
@@ -16,8 +17,8 @@
                               :last-tick 0}})
 (def initial-last-run {})
 
-(def last-run (atom initial-last-run))
-(def live-stats (atom initial-live-run))
+(defonce last-run (atom initial-last-run))
+(defonce live-stats (atom initial-live-run))
 
 (defn triplet [quantity-seq]
   {:avg (util/mean quantity-seq)
@@ -28,13 +29,16 @@
   (let [dnas (map :dna preys)
         total-dnas (reduce (fn [acc dna]
                              (reduce (fn [acc [gene value]]
-                                       (if (boolean? value)
-                                         (update acc gene conj (if value 1.0 0.0))
-                                         (update acc gene conj value))) acc dna))
+                                       (cond
+                                         (boolean? value) (update acc gene conj (if value 1.0 0.0))
+                                         (coll? value) acc
+                                         :else (update acc gene conj value)))
+                                     acc
+                                     dna))
                            {}
                            dnas)]
     (->> total-dnas
-         (map (fn [[gene values]] [gene (util/mean values)]))
+         (map (fn [[gene values]] [gene (double (util/mean values))]))
          (into {}))))
 
 (defn preys-stats [preys]
@@ -58,6 +62,14 @@
                             a)))
   state)
 
+(defn last-gen []
+  (last (:preys @last-run)))
+
+(defn plot-average-dnas []
+ (let [average-dnas (map average-dna (:preys @last-run))
+       genes (keys (last average-dnas))]
+   (doseq [gene genes]
+     (chart/line-chart {:data (map gene average-dnas)} {:adapt? true :title (str/capitalize (name gene))}))))
 
 
 (defn analyze-last-run []
@@ -118,7 +130,7 @@
 
 (defn tick-prey [prey]
   (cond-> prey
-    :always (update :energy dec)
+    :always (update :energy #(- % (get-in prey [:dna :speed])))
     :always (update :age inc)
     (not (:pregnant? prey)) (update :desire inc)
     (:pregnant? prey) (update :pregnancy (fnil inc 0))))
@@ -197,17 +209,3 @@
   #_(async/thread
       (chart/live-min-max-avg-chart live-stats :energies {:title "Energies"
                                                           :rounding-at 1})))
-
-#_(q/defsketch prey
-    :title "Ecosystem"
-    :size [config/world-size config/world-size]
-    ; setup function called only once, during sketch initialization.
-    :setup setup
-    ; update-state is called on each iteration before draw-state.
-    :update update-state
-    :draw draw-state
-    :features [:keep-on-top]
-    ; This sketch uses functional-mode middleware.
-    ; Check quil wiki for more info about middlewares and particularly
-    ; fun-mode.
-    :middleware [m/fun-mode])

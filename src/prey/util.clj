@@ -148,3 +148,6 @@
 (defn mean [coll]
   (/ (reduce + 0 coll)
      (count coll)))
+
+(defn rand-int-1 [max]
+  (inc (rand-int (dec max))))

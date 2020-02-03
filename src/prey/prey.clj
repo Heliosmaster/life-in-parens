@@ -11,27 +11,26 @@
 ;; Energy threshold = the lower it is, the more a specimen can avoid looking for food
 ;; Priority = vector with elements #{:food :mate}, it describes which of the two things has priority in case both are needing
 ;; Gestation = The length of pregnancy, longer gestation should yield a higher base energy (not counting food) for the children
-;; Maturity at = the longer a specimen spends in 'infancy' i.e. without triggering reproduction ;; TODO another effect?
-;; Nutrition = the higher this is, the more nourishment the speciment gains from eating
+;; Maturity at = the longer a specimen spends in 'infancy' i.e. without triggering reproduction ;; TODO another effect? (maybe 1 extra fast always when immature?)
+;; Nutrition = the higher this is, the more nourishment the speciment gains from eating ;; TODO Currently no downsize
 ;; Max-age = the threshold in which the specimen will die of old age ;; TODO currently no downside
-;; Speed = the speed at which the specimen can move ;; TODO currently no effect
+;; Speed = the speed at which the specimen can move
 ;; TODO Memory???
 
-(def dna-config
-  {
-   :gestation {:init (:gestation prey-config)
-               :delta 1} ;; shorter duration = weaker offspring
 
-   ;; desire replenishment or maybe threshold
-   :reproductive-urge {:init 0} ;; how much time it will devote to finding a mate vs finding food
-   ; :food-bites 0 ;; bigger = more time it is idle eating, but more nutrition it gets. NOTE: only work with >1 food chunks.
-   ; :desirability 0 ;; male-only (how much female will like them) NOTE: REMOVE MAYBE?
-   :explorer 0 ;; the higher it is, the more directional inertia they will have when moving randomly
-   :speed 0 ;; faster = more hungry
-   :longevity 0 ;; longer lifespan, slower metabolism (speed + hunger)
-   :development-phase 0 ;; longer = less time without making children, but stronger individual
-   :litter-size 0 ;; smaller litter, stronger offspring
-   })
+
+(defn new-genome []
+  {:litter-size (util/rand-int-1 8)
+   :competition-threshold (util/rand-int-1 16)
+   :avoids-competitors? (rand-nth [true false])
+   :desire-threshold (util/rand-int-1 1024)
+   :energy-threshold (util/rand-int-1 128)
+   :priority (shuffle [:food :mate])
+   :gestation (util/rand-int-1 32)
+   :maturity-at (util/rand-int-1 128)
+   :nutrition (util/rand-int-1 32)
+   :max-age (util/rand-int-1 1024)
+   :speed (util/rand-int-1 8)})
 
 (defn new-prey [{:keys [x y gender dna energy generation]}]
   {:x x
@@ -42,7 +41,7 @@
    :desire 0
    :dna (or dna {:litter-size (:litter-size prey-config)
                  :competition-threshold (:competition-threshold prey-config)
-                 :avoids-competitors? false  #_(rand-nth [true false])
+                 :avoids-competitors? false
                  :desire-threshold (:desire-threshold prey-config)
                  :energy-threshold (:energy-threshold prey-config)
                  :priority [:mate :food]
@@ -57,19 +56,21 @@
    :id (util/new-id)
    :type :prey})
 
+(defn mutate [[gene value]]
+  (if (< (rand) (:mutation-probability prey-config))
+    [gene (get (new-genome) gene)]
+    [gene value]))
+
 (defn new-embryo [mother father]
-  {:energy 20 #_(* (get-in mother [:dna :gestation]))
+  {:energy 20 #_(* (get-in mother [:dna :gestation])) ;; TODO add positive effect to longer gestations
    :dna (->> (keys (:dna mother))
              (map (fn [gene]
                     [gene (rand-nth [(get-in mother [:dna gene])
                                      (get-in father [:dna gene])])]))
+             (map mutate)
              (into {}))})
 
-(defn mutate [value]
-  (cond
-    (int? value) (rand-int config/max-value)
-    (boolean? value) (not value))
-  )
+
 
 
 (defn initialize-preys [terrain]

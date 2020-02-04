@@ -1,15 +1,17 @@
 (ns prey.core
-  (:require [quil.core :as q]
-            [prey.food :as food]
-            [prey.prey :as prey]
-            [prey.chart :as chart]
-            [prey.actions :as actions]
-            [prey.terrain :as terrain]
-            [prey.config :as config]
-            [prey.util :as util]
-            [quil.middleware :as m]
-            [clojure.core.async :as async]
-            [clojure.string :as str]))
+  (:require
+    [clojure.core.async :as async]
+    [clojure.string :as str]
+    [prey.actions :as actions]
+    [prey.chart :as chart]
+    [prey.config :as config]
+    [prey.food :as food]
+    [prey.predator :as predator]
+    [prey.prey :as prey]
+    [prey.terrain :as terrain]
+    [prey.util :as util]
+    [quil.core :as q]
+    [quil.middleware :as m]))
 
 (def initial-live-run {:data {:population-size []
                               :generation []
@@ -66,10 +68,10 @@
   (last (:preys @last-run)))
 
 (defn plot-average-dnas []
- (let [average-dnas (map average-dna (:preys @last-run))
-       genes (keys (last average-dnas))]
-   (doseq [gene genes]
-     (chart/line-chart {:data (map gene average-dnas)} {:adapt? true :title (str/capitalize (name gene))}))))
+  (let [average-dnas (map average-dna (:preys @last-run))
+        genes (keys (last average-dnas))]
+    (doseq [gene genes]
+      (chart/line-chart {:data (map gene average-dnas)} {:adapt? true :title (str/capitalize (name gene))}))))
 
 
 (defn analyze-last-run []
@@ -81,8 +83,15 @@
   )
 
 (defn print-preys [state]
+  (prn "------------")
   (prn "PREYS: ")
   (doseq [[_pid p] (:preys state)]
+    (clojure.pprint/pprint p)))
+
+(defn print-predators [state]
+  (prn "------------")
+  (prn "PREDATORS: ")
+  (doseq [[_pid p] (:predators state)]
     (clojure.pprint/pprint p)))
 
 (defn print-actions [actions]
@@ -111,12 +120,14 @@
   (let [terrain (terrain/initialize)]
     {:food (food/initialize-food terrain)
      :terrain terrain
-     :preys (prey/initialize-preys terrain)}))
+     :preys (prey/initialize-preys terrain)
+     :predators (predator/initialize terrain)}))
 
 (defn debug-initialize-world []
   {:food (food/debug-initialize-food)
    :terrain (terrain/debug-initialize)
-   :preys (prey/debug-initialize-preys)})
+   :preys (prey/debug-initialize-preys)
+   :predators (predator/debug-initialize)})
 
 
 (defn setup []
@@ -128,27 +139,35 @@
 
 ;;; update
 
-(defn tick-prey [prey]
-  (cond-> prey
-    :always (update :energy #(- % (get-in prey [:dna :speed])))
+(defn tick [being]
+  (cond-> being
+    :always (update :energy #(- % (get-in being [:dna :speed])))
     :always (update :age inc)
-    (not (:pregnant? prey)) (update :desire inc)
-    (:pregnant? prey) (update :pregnancy (fnil inc 0))))
+    (not (:pregnant? being)) (update :desire inc)
+    (:pregnant? being) (update :pregnancy (fnil inc 0))))
+
+(defn tick-all-beings [beings]
+  (reduce (fn [acc [being-id being]]
+            (assoc acc being-id (tick being)))
+          {}
+          beings))
 
 (defn tick-world [state]
   (-> state
-      (update :preys (fn [preys]
-                       (reduce (fn [acc [prey-id prey]]
-                                 (assoc acc prey-id (tick-prey prey))) {} preys)))))
+      (update :preys tick-all-beings)
+      (update :predators tick-all-beings)))
 
 
 (defn update-state [state]
-  (let [prey-actions (pmap (fn [[_prey-id prey]] (prey/take-decision prey state))
+  (let [prey-actions (map (fn [[_prey-id prey]] (prey/take-decision prey state))
                            (:preys state))
+        predator-actions (map (fn [[_predator-id predator]] (predator/take-decision predator state))
+                               (:predators state))
         food-actions (food/replenish-food-txs state)
-        actions (concat prey-actions food-actions)]
-    (when config/debug?
+        actions (concat predator-actions prey-actions food-actions)]
+    #_(when config/debug?
       (print-actions actions)
+      (print-predators state)
       (print-preys state))
     (-> (reduce actions/resolve-action state actions)
         (tick-world)
@@ -178,6 +197,7 @@
   (apply q/background config/background-color)
   (draw-terrain state)
   (doseq [being (concat (vals (:food state))
+                        (vals (:predators state))
                         (vals (:preys state)))]
     (let [xx (->size (:x being))
           yy (->size (:y being))]

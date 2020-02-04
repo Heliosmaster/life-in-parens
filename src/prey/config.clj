@@ -1,6 +1,6 @@
 (ns prey.config)
 
-(def debug? false)
+(def debug? true)
 (def grid-size (if debug? 10 40))
 (def unit-size 10)
 (def world-size (* grid-size unit-size))
@@ -26,6 +26,11 @@
           :direction-inertia 10
           :nutrition 20
           :speed 1}
-   :food {:density 0.02
+   :predator {:color {:male [57 73 249]
+                      :female [255 116 91]}
+              :pregnant-color [0 255 0]
+              :direction-inertia 10
+              :initial-density 0.005}
+   :food {:density 0 #_0.02
           :color [35 89 8]
           :lifespan 10}})

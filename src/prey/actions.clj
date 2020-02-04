@@ -59,6 +59,21 @@
   [state _action]
   state)
 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmethod resolve-action [:predator :move] ;; TODO refactor duped code?
+  [state action]
+  (update-in state [:predators (:actor-id action)]
+             (fn [predator]
+               (cond-> predator
+                 true (merge (:destination action))
+                 (:direction action) (assoc :direction (:direction action))
+                 (:new-inertia action) (assoc :direction-inertia (:new-inertia action))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defmethod resolve-action [:food :new-food]
   [state action]
   (assoc-in state [:food (:actor-id action)] (:food action)))

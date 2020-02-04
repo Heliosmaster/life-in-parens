@@ -1,5 +1,6 @@
 (ns prey.prey
   (:require [prey.util :as util]
+            [prey.being :as being]
             [prey.config :as config]))
 
 (def prey-config (:prey config/config))
@@ -85,55 +86,17 @@
 
 (defn debug-initialize-preys []
   (->> [(new-prey {:x 0 :y 0 :gender :male})
-        (new-prey {:x 2 :y 2 :gender :female})
-        #_#_(new-prey {:x 5 :y 5 :gender :male})
-            (new-prey {:x 6 :y 6 :gender :female})]
+        #_(new-prey {:x 2 :y 2 :gender :female})
+        #_(new-prey {:x 5 :y 5 :gender :male})
+        #_(new-prey {:x 6 :y 6 :gender :female})]
        (map (juxt :id identity))
        (into {})))
 
 
-(defn find-food-tx [prey state]
-  (let [[_food-id food] (util/closest (:food state) prey)
-        competitors (util/around (:preys state) prey)]
-    (if (and food
-             (or (not (get-in prey [:dna :avoids-competitors?]))
-                 (<= (count competitors) (get-in prey [:dna :competition-threshold]))))
-      (util/move-towards-tx prey food (:terrain state))
-      (util/move-randomly-tx prey (:terrain state)))))
-
-(defn viable-mate? [prey candidate-mate]
-  (not= (:gender prey)
-        (:gender candidate-mate)))
-
-(defn mating? [prey]
-  (and (>= (:age prey)
-           (get-in prey [:dna :maturity-at]))
-       (>= (:desire prey)
-           (get-in prey [:dna :desire-threshold]))))
-
-(defn hungry? [prey]
-  (<= (:energy prey)
-      (get-in prey [:dna :energy-threshold])))
-
-(defn find-mate-tx [prey state]
-  (when (mating? prey)
-    (let [[_mate-id mate] (util/closest (:preys state) prey viable-mate?)]
-      (when mate
-        (if (and (= :female (:gender prey))
-                 (<= (util/distance prey mate)
-                     (double 2)))
-          {:type :wait
-           :actor-id (:id prey)}
-          (util/move-towards-tx prey mate (:terrain state)))))))
 
 ;; IDEA: Right now if a prey is hungry will always look for food instead of a mate
 ;; There could be a DNA switch that says "find any available among desires" or "find what you desire"
 
-(defn fullfil-desires [prey state] ;; TODO the priority of this could be DNA-encoded?
-  (cond
-    (hungry? prey) (find-food-tx prey state)
-    (mating? prey) (find-mate-tx prey state)
-    :else (util/move-randomly-tx prey (:terrain state))))
 
 (defn die [prey]
   (when (or (> (rand)
@@ -155,11 +118,15 @@
                     (:children prey))
      :actor-type :prey}))
 
+(defn avoid-death [prey state]
+  (let [predators (vals (util/around (:predators state) prey))]
+    (util/avoid-things-tx prey predators (:terrain state))))
+
 (defn interact [prey state]
-  (let [[mate-id mate] (util/in-same-space (:preys state) prey viable-mate?)
+  (let [[mate-id mate] (util/in-same-space (:preys state) prey being/viable-mate?)
         [food-id food] (util/in-same-space (:food state) prey)
-        ready-to-mate? (and mate (mating? prey) (mating? mate))
-        ready-to-eat? (and food (hungry? prey))
+        ready-to-mate? (and mate (being/mating? prey) (being/mating? mate))
+        ready-to-eat? (and food (being/hungry? prey))
         needs->event {:mate (when ready-to-mate? {:type :mate
                                                   :actor-id (:id prey)
                                                   :actor-type :prey
@@ -177,6 +144,7 @@
 (defn take-decision [prey state]
   (or (die prey)
       (give-birth prey)
+      (avoid-death prey state)
       (interact prey state)
-      (fullfil-desires prey state)))
+      (being/fullfil-desires prey state)))
 

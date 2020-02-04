@@ -1,6 +1,7 @@
 (ns prey.core
   (:require
     [clojure.core.async :as async]
+    [clojure.pprint :as pprint]
     [clojure.string :as str]
     [prey.actions :as actions]
     [prey.chart :as chart]
@@ -51,17 +52,18 @@
      :energies        (when (seq energies) (triplet energies))}))
 
 (defn save-stats [state]
-  (swap! live-stats (fn [a] (if-let [preys (seq (:preys state))]
-                              (let [stats (preys-stats (vals preys))]
-                                (-> a
-                                    (assoc-in [:data :last-tick] (q/frame-count))
-                                    (update-in [:data :population-size] (fnil conj []) (:population-size stats))
-                                    (update-in [:data :generation] (fnil conj []) (:generation stats))
-                                    (update-in [:data :energies] (fnil conj []) (:energies stats))))
-                              a)))
-  (swap! last-run (fn [a] (if-let [preys (seq (:preys state))]
-                            (update a :preys (fnil conj []) (vals preys))
-                            a)))
+  (when-not config/debug?
+    (swap! live-stats (fn [a] (if-let [preys (seq (:preys state))]
+                                (let [stats (preys-stats (vals preys))]
+                                  (-> a
+                                      (assoc-in [:data :last-tick] (q/frame-count))
+                                      (update-in [:data :population-size] (fnil conj []) (:population-size stats))
+                                      (update-in [:data :generation] (fnil conj []) (:generation stats))
+                                      (update-in [:data :energies] (fnil conj []) (:energies stats))))
+                                a)))
+    (swap! last-run (fn [a] (if-let [preys (seq (:preys state))]
+                              (update a :preys (fnil conj []) (vals preys))
+                              a))))
   state)
 
 (defn last-gen []
@@ -79,27 +81,26 @@
                    (map preys-stats))]
     (chart/line-chart {:data  (map :population-size stats)
                        :title "Population"}
-                      {}))
-  )
+                      {})))
 
 (defn print-preys [state]
   (prn "------------")
   (prn "PREYS: ")
   (doseq [[_pid p] (:preys state)]
-    (clojure.pprint/pprint p)))
+    (pprint/pprint p)))
 
 (defn print-predators [state]
   (prn "------------")
   (prn "PREDATORS: ")
   (doseq [[_pid p] (:predators state)]
-    (clojure.pprint/pprint p)))
+    (pprint/pprint p)))
 
 (defn print-actions [actions]
   (prn "------------")
   (prn (q/frame-count))
   (prn "ACTIONS: ")
   (doseq [a actions]
-    (clojure.pprint/pprint a)))
+    (pprint/pprint a)))
 
 (defn print-stats [state]
   (let [{:keys [nmales nfemales]} (preys-stats state)]
@@ -224,9 +225,9 @@
     ; Check quil wiki for more info about middlewares and particularly
     ; fun-mode.
     :middleware [m/fun-mode])
-  (async/thread
-    (chart/live-line-chart live-stats :population-size {:title       "Population"
-                                                        :rounding-at 10}))
+  #_(async/thread
+      (chart/live-line-chart live-stats :population-size {:title       "Population"
+                                                          :rounding-at 10}))
   #_(async/thread
       (chart/live-min-max-avg-chart live-stats :energies {:title       "Energies"
                                                           :rounding-at 1})))

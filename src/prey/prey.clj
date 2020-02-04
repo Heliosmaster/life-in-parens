@@ -21,41 +21,41 @@
 
 
 (defn new-genome []
-  {:litter-size (util/rand-int-1 8)
+  {:litter-size           (util/rand-int-1 8)
    :competition-threshold (util/rand-int-1 16)
-   :avoids-competitors? (rand-nth [true false])
-   :desire-threshold (util/rand-int-1 1024)
-   :energy-threshold (util/rand-int-1 128)
-   :priority (shuffle [:food :mate])
-   :gestation (util/rand-int-1 32)
-   :maturity-at (util/rand-int-1 128)
-   :nutrition (util/rand-int-1 32)
-   :max-age (util/rand-int-1 1024)
-   :speed (util/rand-int-1 8)})
+   :avoids-competitors?   (rand-nth [true false])
+   :desire-threshold      (util/rand-int-1 1024)
+   :energy-threshold      (util/rand-int-1 128)
+   :priority              (shuffle [:food :mate])
+   :gestation             (util/rand-int-1 32)
+   :maturity-at           (util/rand-int-1 128)
+   :nutrition             (util/rand-int-1 32)
+   :max-age               (util/rand-int-1 1024)
+   :speed                 (util/rand-int-1 8)})
 
 (defn new-prey [{:keys [x y gender dna energy generation]}]
-  {:x x
-   :y y
-   :age 0
-   :generation (if generation (inc generation) 1)
-   :energy (or energy (:initial-energy prey-config))
-   :desire 0
-   :dna (or dna {:litter-size (:litter-size prey-config)
-                 :competition-threshold (:competition-threshold prey-config)
-                 :avoids-competitors? false
-                 :desire-threshold (:desire-threshold prey-config)
-                 :energy-threshold (:energy-threshold prey-config)
-                 :priority [:mate :food]
-                 :gestation (:gestation prey-config)
-                 :maturity-at (:maturity-at prey-config)
-                 :nutrition (:nutrition prey-config)
-                 :max-age (:max-age prey-config)
-                 :speed (:speed prey-config)})
+  {:x                 x
+   :y                 y
+   :age               0
+   :generation        (if generation (inc generation) 1)
+   :energy            (or energy (:initial-energy prey-config))
+   :desire            0
+   :dna               (or dna {:litter-size           (:litter-size prey-config)
+                               :competition-threshold (:competition-threshold prey-config)
+                               :avoids-competitors?   false
+                               :desire-threshold      (:desire-threshold prey-config)
+                               :energy-threshold      (:energy-threshold prey-config)
+                               :priority              [:mate :food]
+                               :gestation             (:gestation prey-config)
+                               :maturity-at           (:maturity-at prey-config)
+                               :nutrition             (:nutrition prey-config)
+                               :max-age               (:max-age prey-config)
+                               :speed                 (:speed prey-config)})
    :direction-inertia (:direction-inertia prey-config)
-   :direction (rand-nth [:north :south :east :west])
-   :gender (or gender (rand-nth [:male :female]))
-   :id (util/new-id)
-   :type :prey})
+   :direction         (rand-nth [:north :south :east :west])
+   :gender            (or gender (rand-nth [:male :female]))
+   :id                (util/new-id)
+   :type              :prey})
 
 (defn mutate [[gene value]]
   (if (< (rand) (:mutation-probability prey-config))
@@ -63,13 +63,13 @@
     [gene value]))
 
 (defn new-embryo [mother father]
-  {:energy 20 #_(* (get-in mother [:dna :gestation])) ;; TODO add positive effect to longer gestations
-   :dna (->> (keys (:dna mother))
-             (map (fn [gene]
-                    [gene (rand-nth [(get-in mother [:dna gene])
-                                     (get-in father [:dna gene])])]))
-             (map mutate)
-             (into {}))})
+  {:energy 20 #_(* (get-in mother [:dna :gestation]))       ;; TODO add positive effect to longer gestations
+   :dna    (->> (keys (:dna mother))
+                (map (fn [gene]
+                       [gene (rand-nth [(get-in mother [:dna gene])
+                                        (get-in father [:dna gene])])]))
+                (map mutate)
+                (into {}))})
 
 
 
@@ -86,14 +86,11 @@
 
 (defn debug-initialize-preys []
   (->> [(new-prey {:x 0 :y 0 :gender :male})
-        #_(new-prey {:x 2 :y 2 :gender :female})
-        #_(new-prey {:x 5 :y 5 :gender :male})
-        #_(new-prey {:x 6 :y 6 :gender :female})]
+        (new-prey {:x 2 :y 2 :gender :female})
+        (new-prey {:x 7 :y 5 :gender :male})
+        (new-prey {:x 1 :y 6 :gender :female})]
        (map (juxt :id identity))
        (into {})))
-
-
-
 
 
 (defn die [prey]
@@ -118,7 +115,8 @@
 
 (defn avoid-death [prey state]
   (let [predators (vals (util/around (:predators state) prey))]
-    (util/avoid-things-tx prey predators (:terrain state))))
+    (when (seq predators)
+      (util/avoid-things-tx prey predators (:terrain state)))))
 
 (defn interact [prey state]
   (let [[mate-id mate] (util/in-same-space (:preys state) prey being/viable-mate?)

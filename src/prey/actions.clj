@@ -88,7 +88,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmethod resolve-action [:food :new-food]
+(defmethod resolve-action [:food :new]
   [state action]
   (assoc-in state [:food (:actor-id action)] (:food action)))
 
@@ -96,6 +96,7 @@
   state)
 
 (defn resolve-action* [state action]
-  (if (get-in state [(being-key (:actor-type action)) (:actor-id action)])
+  (if (or (= (:type action) :new)
+          (get-in state [(being-key (:actor-type action)) (:actor-id action)]))
     (resolve-action state action)
     state))

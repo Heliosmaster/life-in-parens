@@ -4,11 +4,11 @@
 
 (defn all-neighbors [x y]
   (let [n (fn [z] (cond-> [z]
-                    (pos? z) (conj (dec z))
-                    (< z (dec config/grid-size)) (conj (inc z))))]
+                          (pos? z) (conj (dec z))
+                          (< z (dec config/grid-size)) (conj (inc z))))]
     (for [xx (n x)
           yy (n y)
-          ] ;;   :when (or (not= x xx) (not= y yy))
+          ]                                                 ;;   :when (or (not= x xx) (not= y yy))
       [xx yy])))
 
 (defn refine [water-points]
@@ -26,8 +26,8 @@
 
 
 (defn initialize []
-  #{} #_ (nth (iterate refine (generate))
-       20))
+  #{} #_(nth (iterate refine (generate))
+             20))
 
 (defn debug-initialize []
   #{})

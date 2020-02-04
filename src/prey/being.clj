@@ -27,11 +27,11 @@
                     (util/position food))
                  (:catch? being))
           [move-action
-           {:type      :kill
-            :actor-id (:id being)
+           {:type       :kill
+            :actor-id   (:id being)
             :actor-type (:type being)
-            :nutrition (get-in being [:dna :nutrition])
-            :target-id food-id}]
+            :nutrition  (get-in being [:dna :nutrition])
+            :target-id  food-id}]
           [move-action]))
       (util/move-randomly-tx being (:terrain state)))))
 
@@ -44,9 +44,9 @@
         (if (and (= :female (:gender being))
                  (<= (util/distance being mate)
                      (double 2)))
-          [{:type     :wait
+          [{:type       :wait
             :actor-type (:type being)
-            :actor-id (:id being)}]
+            :actor-id   (:id being)}]
           (util/move-towards-tx being mate (:terrain state)))))))
 
 

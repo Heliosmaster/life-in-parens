@@ -3,9 +3,9 @@
             [prey.config :as config]))
 
 (defn new-food [{:keys [x y]}]
-  {:x x
-   :id (util/new-id)
-   :y y
+  {:x    x
+   :id   (util/new-id)
+   :y    y
    :type :food})
 
 (defn initialize-food [terrain]
@@ -29,7 +29,7 @@
         food-coords (repeatedly food-to-spawn #(util/viable-random-position (:terrain state) config/grid-size))]
     (map (fn [[x y]]
            (let [food (new-food {:x x :y y})]
-             [{:type       :new-food
+             [{:type       :new
                :actor-type :food
                :actor-id   (:id food)
                :food       food}]))

@@ -13,9 +13,11 @@
    :generation (if generation (inc generation) 1)
    :energy (or energy 100 #_(:initial-energy predator-config))
    :desire 0
+   :catch? true                                             ;; TODO DNA encode this? Maybe see that it will be selected?
    :dna {:speed 2
          :energy-threshold 100
          :desire-threshold 40
+         :nutrition 100
          :maturity-at 10}
    #_#_:dna (or dna {:litter-size (:litter-size predator-config)
                      :competition-threshold (:competition-threshold predator-config)

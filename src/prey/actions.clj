@@ -1,8 +1,13 @@
 (ns prey.actions)
 
+(def being-key {:prey     :preys
+                :predator :predators
+                :food     :food})
+
+
 (defmulti resolve-action
-  (fn [_state action]
-    [(:actor-type action) (:type action)]))
+          (fn [_state action]
+            [(:actor-type action) (:type action)]))
 
 (defmethod resolve-action [:prey :die]
   [state action]
@@ -10,20 +15,21 @@
 
 (defmethod resolve-action [:prey :move]
   [state action]
+
   (update-in state [:preys (:actor-id action)]
              (fn [prey]
                (cond-> prey
-                 true (merge (:destination action))
-                 (:direction action) (assoc :direction (:direction action))
-                 (:new-inertia action) (assoc :direction-inertia (:new-inertia action))))))
+                       true (merge (:destination action))
+                       (:direction action) (assoc :direction (:direction action))
+                       (:new-inertia action) (assoc :direction-inertia (:new-inertia action))))))
 
 (defmethod resolve-action [:prey :mate]
   [state action]
   (update-in state [:preys (:actor-id action)]
              (fn [prey] (cond-> prey
-                          :always (assoc :desire 0)
-                          (= :female (:gender prey)) (merge {:pregnant? true
-                                                             :children (:children action)})))))
+                                :always (assoc :desire 0)
+                                (= :female (:gender prey)) (merge {:pregnant? true
+                                                                   :children  (:children action)})))))
 
 (defn eat-while-pregnant [prey action]
   (-> prey
@@ -63,14 +69,22 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmethod resolve-action [:predator :move] ;; TODO refactor duped code?
+(defmethod resolve-action [:predator :move]                 ;; TODO refactor duped code?
   [state action]
   (update-in state [:predators (:actor-id action)]
              (fn [predator]
                (cond-> predator
-                 true (merge (:destination action))
-                 (:direction action) (assoc :direction (:direction action))
-                 (:new-inertia action) (assoc :direction-inertia (:new-inertia action))))))
+                       true (merge (:destination action))
+                       (:direction action) (assoc :direction (:direction action))
+                       (:new-inertia action) (assoc :direction-inertia (:new-inertia action))))))
+
+(defmethod resolve-action [:predator :kill]
+  [state action]
+  (if (get-in state [:preys (:target-id action)])
+    (-> state
+        (update-in [:preys] dissoc (:target-id action))
+        (update-in [:predators (:actor-id action) :energy] + (:nutrition action)))
+    state))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -80,3 +94,8 @@
 
 (defmethod resolve-action :default [state _action]
   state)
+
+(defn resolve-action* [state action]
+  (if (get-in state [(being-key (:actor-type action)) (:actor-id action)])
+    (resolve-action state action)
+    state))

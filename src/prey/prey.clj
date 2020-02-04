@@ -94,29 +94,27 @@
 
 
 
-;; IDEA: Right now if a prey is hungry will always look for food instead of a mate
-;; There could be a DNA switch that says "find any available among desires" or "find what you desire"
 
 
 (defn die [prey]
   (when (or (> (rand)
                (util/survival-probability (:age prey) (get-in prey [:dna :max-age])))
             (not (pos? (:energy prey))))
-    {:type :die
-     :actor-id (:id prey)
-     :actor-type :prey}))
+    [{:type       :die
+      :actor-id   (:id prey)
+      :actor-type :prey}]))
 
 (defn give-birth [prey]
   (when (and (= :female (:gender prey))
              (:pregnant? prey)
              (>= (:pregnancy prey)
                  (get-in prey [:dna :gestation])))
-    {:type :spawn
-     :actor-id (:id prey)
-     :children (map (fn [child] (new-prey (merge child
-                                                 (select-keys prey [:x :y :generation]))))
-                    (:children prey))
-     :actor-type :prey}))
+    [{:type       :spawn
+      :actor-id   (:id prey)
+      :actor-type :prey
+      :children   (map (fn [child] (new-prey (merge child
+                                                    (select-keys prey [:x :y :generation]))))
+                       (:children prey))}]))
 
 (defn avoid-death [prey state]
   (let [predators (vals (util/around (:predators state) prey))]
@@ -127,18 +125,18 @@
         [food-id food] (util/in-same-space (:food state) prey)
         ready-to-mate? (and mate (being/mating? prey) (being/mating? mate))
         ready-to-eat? (and food (being/hungry? prey))
-        needs->event {:mate (when ready-to-mate? {:type :mate
-                                                  :actor-id (:id prey)
-                                                  :actor-type :prey
-                                                  :children (repeatedly (get-in prey [:dna :litter-size])
-                                                                        #(new-embryo prey mate))
+        needs->event {:mate (when ready-to-mate? [{:type       :mate
+                                                   :actor-id   (:id prey)
+                                                   :actor-type :prey
+                                                   :children   (repeatedly (get-in prey [:dna :litter-size])
+                                                                           #(new-embryo prey mate))
 
-                                                  :mate-id mate-id})
-                      :food (when ready-to-eat? {:type :eat-food
-                                                 :actor-id (:id prey)
-                                                 :nutrition (get-in prey [:dna :nutrition])
-                                                 :actor-type :prey
-                                                 :target-id food-id})}]
+                                                   :mate-id    mate-id}])
+                      :food (when ready-to-eat? [{:type       :eat-food
+                                                  :actor-id   (:id prey)
+                                                  :actor-type :prey
+                                                  :nutrition  (get-in prey [:dna :nutrition])
+                                                  :target-id  food-id}])}]
     (some identity (map needs->event (get-in prey [:dna :priority])))))
 
 (defn take-decision [prey state]

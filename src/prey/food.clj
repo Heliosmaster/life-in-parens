@@ -29,8 +29,8 @@
         food-coords (repeatedly food-to-spawn #(util/viable-random-position (:terrain state) config/grid-size))]
     (map (fn [[x y]]
            (let [food (new-food {:x x :y y})]
-             {:type :new-food
-              :actor-type :food
-              :actor-id (:id food)
-              :food food}))
+             [{:type       :new-food
+               :actor-type :food
+               :actor-id   (:id food)
+               :food       food}]))
          food-coords)))

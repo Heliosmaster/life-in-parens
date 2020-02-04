@@ -13,6 +13,9 @@
      :ymax (+ (:y being) sr)
      :size (inc (* 2 sr))}))
 
+(defn position [being]
+  (select-keys being [:x :y]))
+
 (defn manhattan-distance [a b]
   (when (and a b)
     (+ (Math/abs ^Integer (- (:x a) (:x b)))
@@ -54,8 +57,8 @@
   (loop [step-n 1
          direction-inertia (:direction-inertia source)
          current-direction (:direction source)
-         position (select-keys source [:x :y])]
-    (let [valid-directions (filter #(valid-direction? position % terrain)
+         pos (position source)]
+    (let [valid-directions (filter #(valid-direction? pos % terrain)
                                    [:north :south :east :west])]
       (if (seq valid-directions)
         (let [new-direction (if (and (contains? (set valid-directions) current-direction)
@@ -67,25 +70,26 @@
                             (get-in config/config [(:type source) :direction-inertia]))
               new-pos (take-one-step source new-direction)]
           (if (= step-n (get-in source [:dna :speed]))
-            {:type        :move
-             :actor-id    (:id source)
-             :actor-type  (:type source)
-             :destination new-pos
-             :direction   new-direction
-             :new-inertia new-inertia}
+            [{:type        :move
+              :actor-id    (:id source)
+              :actor-type  (:type source)
+              :destination new-pos
+              :direction   new-direction
+              :new-inertia new-inertia}]
             (recur (inc step-n)
                    new-inertia
                    new-direction
                    new-pos)))
-        (if (= position (select-keys source [:x :y]))
-          {:type     :wait
-           :actor-id (:id source)}
-          {:type        :move
-           :actor-id    (:id source)
-           :actor-type  (:type source)
-           :destination position
-           :direction   current-direction
-           :new-inertia direction-inertia})))))
+        (if (= pos (position source))
+          [{:type     :wait
+            :actor-id (:id source)
+            :actor-type (:type source)}]
+          [{:type        :move
+            :actor-id    (:id source)
+            :actor-type  (:type source)
+            :destination pos
+            :direction   current-direction
+            :new-inertia direction-inertia}])))))
 
 (defn move-towards-tx [source target terrain]
   (loop [step-n 1
@@ -100,15 +104,18 @@
                              (pos? (- (:y target) y)) (conj :south)
                              (neg? (- (:y target) y)) (conj :north))
           valid-directions (filter #(valid-direction? position % terrain)
-                                   directions)
-          move-tx {:type       :move
-                   :actor-id   (:id new-source)
-                   :actor-type (:type new-source)}]
+                                   directions)]
       (cond
-        there? (assoc move-tx :destination position)
+        there? [{:type        :move
+                 :actor-id    (:id new-source)
+                 :actor-type  (:type new-source)
+                 :destination position}]
         (seq valid-directions) (let [new-pos (take-one-step position (rand-nth valid-directions))]
                                  (if (= step-n (get-in new-source [:dna :speed]))
-                                   (assoc move-tx :destination new-pos)
+                                   [{:type        :move
+                                     :actor-id    (:id new-source)
+                                     :actor-type  (:type new-source)
+                                     :destination new-pos}]
                                    (recur (inc step-n) (merge new-source new-pos))))
         :else (move-randomly-tx new-source terrain)))))
 
@@ -132,27 +139,27 @@
     (let [{:keys [x y]} new-source
           position {:x x :y y}
           valid-directions (:directions (reduce (fn [acc direction]
-                                                   (let [new-pos (take-one-step position direction)
-                                                         total-distance (->> targets
-                                                                             (map (partial manhattan-distance new-pos))
-                                                                             (reduce + 0))]
-                                                     (cond
-                                                       (or (empty? (:directions acc))
-                                                           (> total-distance (:min-distance acc))) {:min-distance total-distance
-                                                                                                    :directions   [direction]}
-                                                       (= total-distance (:min-distance acc)) (update acc :directions conj direction)
-                                                       :else acc)))
-                                                 {:min-distance nil
-                                                  :directions   []}
-                                                 (filter #(valid-direction? position % terrain) [:north :south :east :west])))]
+                                                  (let [new-pos (take-one-step position direction)
+                                                        total-distance (->> targets
+                                                                            (map (partial manhattan-distance new-pos))
+                                                                            (reduce + 0))]
+                                                    (cond
+                                                      (or (empty? (:directions acc))
+                                                          (> total-distance (:min-distance acc))) {:min-distance total-distance
+                                                                                                   :directions   [direction]}
+                                                      (= total-distance (:min-distance acc)) (update acc :directions conj direction)
+                                                      :else acc)))
+                                                {:min-distance nil
+                                                 :directions   []}
+                                                (filter #(valid-direction? position % terrain) [:north :south :east :west])))]
       (if (seq valid-directions)
-        (let [ new-position (take-one-step position (rand-nth valid-directions))]
+        (let [new-position (take-one-step position (rand-nth valid-directions))]
 
           (if (= step-n (get-in source [:dna :speed]))
-            {:type        :move
-             :actor-id    (:id new-source)
-             :actor-type  (:type new-source)
-             :destination new-position}
+            [{:type        :move
+              :actor-id    (:id new-source)
+              :actor-type  (:type new-source)
+              :destination new-position}]
             (recur (inc step-n) (merge new-source new-position))))
         (move-randomly-tx new-source terrain)))))
 

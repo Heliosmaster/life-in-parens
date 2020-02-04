@@ -14,9 +14,9 @@
     [quil.middleware :as m]))
 
 (def initial-live-run {:data {:population-size []
-                              :generation []
-                              :energies []
-                              :last-tick 0}})
+                              :generation      []
+                              :energies        []
+                              :last-tick       0}})
 (def initial-last-run {})
 
 (defonce last-run (atom initial-last-run))
@@ -46,9 +46,9 @@
 (defn preys-stats [preys]
   (let [generations (map :generation preys)
         energies (map :energy preys)]
-    {:generation (when (seq generations) (triplet generations))
+    {:generation      (when (seq generations) (triplet generations))
      :population-size (count preys)
-     :energies (when (seq energies) (triplet energies))}))
+     :energies        (when (seq energies) (triplet energies))}))
 
 (defn save-stats [state]
   (swap! live-stats (fn [a] (if-let [preys (seq (:preys state))]
@@ -77,7 +77,7 @@
 (defn analyze-last-run []
   (let [stats (->> (:preys @last-run)
                    (map preys-stats))]
-    (chart/line-chart {:data (map :population-size stats)
+    (chart/line-chart {:data  (map :population-size stats)
                        :title "Population"}
                       {}))
   )
@@ -107,7 +107,7 @@
                                                                                                         (pos? nfemales))
                                                                                                  (double (/ nmales nfemales))
                                                                                                  0.0)))))
-(defn color [being] ;; FIXME temporary pregnant just for debugging
+(defn color [being]                                         ;; FIXME temporary pregnant just for debugging
   (if (:pregnant? being)
     (get-in config/config [(:type being) :pregnant-color])
     (if (:gender being)
@@ -118,15 +118,15 @@
 
 (defn initialize-world []
   (let [terrain (terrain/initialize)]
-    {:food (food/initialize-food terrain)
-     :terrain terrain
-     :preys (prey/initialize-preys terrain)
+    {:food      (food/initialize-food terrain)
+     :terrain   terrain
+     :preys     (prey/initialize-preys terrain)
      :predators (predator/initialize terrain)}))
 
 (defn debug-initialize-world []
-  {:food (food/debug-initialize-food)
-   :terrain (terrain/debug-initialize)
-   :preys (prey/debug-initialize-preys)
+  {:food      (food/debug-initialize-food)
+   :terrain   (terrain/debug-initialize)
+   :preys     (prey/debug-initialize-preys)
    :predators (predator/debug-initialize)})
 
 
@@ -141,10 +141,10 @@
 
 (defn tick [being]
   (cond-> being
-    :always (update :energy #(- % (get-in being [:dna :speed])))
-    :always (update :age inc)
-    (not (:pregnant? being)) (update :desire inc)
-    (:pregnant? being) (update :pregnancy (fnil inc 0))))
+          :always (update :energy #(- % (get-in being [:dna :speed])))
+          :always (update :age inc)
+          (not (:pregnant? being)) (update :desire inc)
+          (:pregnant? being) (update :pregnancy (fnil inc 0))))
 
 (defn tick-all-beings [beings]
   (reduce (fn [acc [being-id being]]
@@ -160,16 +160,16 @@
 
 (defn update-state [state]
   (let [prey-actions (map (fn [[_prey-id prey]] (prey/take-decision prey state))
-                           (:preys state))
+                          (:preys state))
         predator-actions (map (fn [[_predator-id predator]] (predator/take-decision predator state))
-                               (:predators state))
+                              (:predators state))
         food-actions (food/replenish-food-txs state)
-        actions (concat predator-actions prey-actions food-actions)]
-    #_(when config/debug?
+        actions (apply concat (concat predator-actions prey-actions food-actions))]
+    (when config/debug?
       (print-actions actions)
       (print-predators state)
       (print-preys state))
-    (-> (reduce actions/resolve-action state actions)
+    (-> (reduce actions/resolve-action* state actions)
         (tick-world)
         (save-stats))))
 
@@ -196,16 +196,17 @@
 (defn draw-state [state]
   (apply q/background config/background-color)
   (draw-terrain state)
-  (doseq [being (concat (vals (:food state))
-                        (vals (:predators state))
-                        (vals (:preys state)))]
-    (let [xx (->size (:x being))
-          yy (->size (:y being))]
-      (apply q/fill (color being))
-      (q/no-stroke)
-      (q/rect xx yy config/unit-size config/unit-size)
-      (when (and config/debug? (= :prey (:type being)))
-        (draw-sight being)))))
+  (let [beings (concat (vals (:food state))
+                       (vals (:predators state))
+                       (vals (:preys state)))]
+    (doseq [being beings]
+      (let [xx (->size (:x being))
+            yy (->size (:y being))]
+        (apply q/fill (color being))
+        (q/no-stroke)
+        (q/rect xx yy config/unit-size config/unit-size)
+        (when (and config/debug? (= :prey (:type being)))
+          (draw-sight being))))))
 
 (defn run []
   (reset! live-stats initial-live-run)
@@ -224,8 +225,8 @@
     ; fun-mode.
     :middleware [m/fun-mode])
   (async/thread
-    (chart/live-line-chart live-stats :population-size {:title "Population"
+    (chart/live-line-chart live-stats :population-size {:title       "Population"
                                                         :rounding-at 10}))
   #_(async/thread
-      (chart/live-min-max-avg-chart live-stats :energies {:title "Energies"
+      (chart/live-min-max-avg-chart live-stats :energies {:title       "Energies"
                                                           :rounding-at 1})))

@@ -32,7 +32,7 @@
                                   :female [255 116 91]}
               :pregnant-color    [0 255 0]
               :direction-inertia 10
-              :initial-density   0 #_0.001}
+              :initial-density   0.01}
    :food     {:density  0.02
               :color    [35 89 8]
               :lifespan 10}})

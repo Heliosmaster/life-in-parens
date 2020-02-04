@@ -17,7 +17,7 @@
    :dna               {:speed            2
                        :energy-threshold 100
                        :desire-threshold 40
-                       :nutrition        100
+                       :nutrition        20
                        :maturity-at      10}
    #_#_:dna (or dna {:litter-size           (:litter-size predator-config)
                      :competition-threshold (:competition-threshold predator-config)
@@ -38,12 +38,13 @@
 
 
 (defn initialize [terrain]
-  (->> (for [x (range 0 config/grid-size)
+  (->> #_(for [x (range 0 config/grid-size)
              y (range 0 config/grid-size)
              :let [p (rand)]
              :when (and (<= p (:initial-density predator-config))
                         (not (contains? terrain [x y])))]
          (new-predator {:x x :y y}))
+       [(new-predator {:x 10 :y 10})]
        (map (juxt :id identity))
        (into {})))
 
@@ -57,4 +58,5 @@
   (or #_(die prey)
     #_(give-birth prey)
     #_(interact prey state)
-    (being/fullfil-desires predator state)))
+    (being/fullfil-desires predator state)
+    (util/move-randomly-tx predator (:terrain state))))

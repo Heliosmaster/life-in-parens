@@ -151,5 +151,6 @@
       (give-birth prey)
       (avoid-death prey state)
       (interact prey state)
-      (being/fullfil-desires prey state)))
+      (being/fullfil-desires prey state)
+      (util/move-randomly-tx prey (:terrain state))))
 

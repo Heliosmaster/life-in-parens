@@ -11,6 +11,11 @@
 
 (defmethod resolve-action [:prey :die]
   [state action]
+  (update-in state [:preys (:actor-id action)] merge {:dead? true
+                                                      :dead-since 0}))
+
+(defmethod resolve-action [:prey :decompose]
+  [state action]
   (update-in state [:preys] dissoc (:actor-id action)))
 
 (defmethod resolve-action [:prey :move]

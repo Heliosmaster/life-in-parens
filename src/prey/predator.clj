@@ -48,10 +48,10 @@
        (into {})))
 
 (defn debug-initialize []
-  (->> [(new-predator {:x 1 :y 2 :gender :male})
-        #_(new-predator {:x 5 :y 5 :gender :female})]
-       (map (juxt :id identity))
-       (into {})))
+  {} #_(->> [(new-predator {:x 1 :y 2 :gender :male})
+             #_(new-predator {:x 5 :y 5 :gender :female})]
+            (map (juxt :id identity))
+            (into {})))
 
 (defn take-decision [predator state]
   (or #_(die prey)

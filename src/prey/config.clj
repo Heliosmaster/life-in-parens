@@ -11,12 +11,14 @@
 (def config
   {:prey     {:color                 {:male   [204 230 255]
                                       :female [255 179 230]}
+              :dead-color            [211 187 146]
               :pregnant-color        [255 0 0]
               :initial-density       0.025
               :initial-energy        40
               :gestation             5
               :litter-size           3
               :maturity-at           10
+              :decompose-after       10
               :max-age               400
               :competition-threshold 3
               :crossover-probability 0.2
@@ -30,7 +32,7 @@
                                   :female [255 116 91]}
               :pregnant-color    [0 255 0]
               :direction-inertia 10
-              :initial-density   0.001}
+              :initial-density   0 #_0.001}
    :food     {:density  0.02
               :color    [35 89 8]
               :lifespan 10}})

@@ -109,11 +109,11 @@
                                                                                                  (double (/ nmales nfemales))
                                                                                                  0.0)))))
 (defn color [being]                                         ;; FIXME temporary pregnant just for debugging
-  (if (:pregnant? being)
-    (get-in config/config [(:type being) :pregnant-color])
-    (if (:gender being)
-      (get-in config/config [(:type being) :color (:gender being)])
-      (get-in config/config [(:type being) :color]))))
+  (cond
+    (:dead? being) (get-in config/config [(:type being) :dead-color])
+    (:pregnant? being) (get-in config/config [(:type being) :pregnant-color])
+    (:gender being) (get-in config/config [(:type being) :color (:gender being)])
+    :else (get-in config/config [(:type being) :color])))
 
 (defn ->size [i] (* i config/unit-size))
 
@@ -121,13 +121,13 @@
   (let [terrain (terrain/initialize)]
     {:food      (food/initialize-food terrain)
      :terrain   terrain
-     :preys     (prey/initialize-preys terrain)
+     :preys     (prey/initialize terrain)
      :predators (predator/initialize terrain)}))
 
 (defn debug-initialize-world []
   {:food      (food/debug-initialize-food)
    :terrain   (terrain/debug-initialize)
-   :preys     (prey/debug-initialize-preys)
+   :preys     (prey/debug-initialize)
    :predators (predator/debug-initialize)})
 
 
@@ -144,6 +144,7 @@
   (cond-> being
           :always (update :energy #(- % (get-in being [:dna :speed])))
           :always (update :age inc)
+          (:dead? being) (update :dead-since inc)
           (not (:pregnant? being)) (update :desire inc)
           (:pregnant? being) (update :pregnancy (fnil inc 0))))
 
@@ -206,8 +207,8 @@
         (apply q/fill (color being))
         (q/no-stroke)
         (q/rect xx yy config/unit-size config/unit-size)
-        (when (and config/debug? (= :prey (:type being)))
-          (draw-sight being))))))
+        #_(when (and config/debug? (= :prey (:type being)))
+            (draw-sight being))))))
 
 (defn run []
   (reset! live-stats initial-live-run)

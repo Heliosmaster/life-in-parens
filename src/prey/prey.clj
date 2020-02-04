@@ -40,6 +40,7 @@
    :generation        (if generation (inc generation) 1)
    :energy            (or energy (:initial-energy prey-config))
    :desire            0
+   :dead?             false
    :dna               (or dna {:litter-size           (:litter-size prey-config)
                                :competition-threshold (:competition-threshold prey-config)
                                :avoids-competitors?   false
@@ -74,7 +75,7 @@
 
 
 
-(defn initialize-preys [terrain]
+(defn initialize [terrain]
   (->> (for [x (range 0 config/grid-size)
              y (range 0 config/grid-size)
              :let [p (rand)]
@@ -84,19 +85,27 @@
        (map (juxt :id identity))
        (into {})))
 
-(defn debug-initialize-preys []
+(defn debug-initialize []
   (->> [(new-prey {:x 0 :y 0 :gender :male})
-        (new-prey {:x 2 :y 2 :gender :female})
-        (new-prey {:x 7 :y 5 :gender :male})
-        (new-prey {:x 1 :y 6 :gender :female})]
+        #_(new-prey {:x 2 :y 2 :gender :female})
+        #_(new-prey {:x 7 :y 5 :gender :male})
+        #_(new-prey {:x 1 :y 6 :gender :female})]
        (map (juxt :id identity))
        (into {})))
 
+(defn decompose [prey]
+  (when (:dead? prey)
+    (if (< (:dead-since prey) (:decompose-after prey-config))
+      []
+      [{:type       :decompose
+        :actor-id   (:id prey)
+        :actor-type :prey}])))
 
 (defn die [prey]
-  (when (or (> (rand)
-               (util/survival-probability (:age prey) (get-in prey [:dna :max-age])))
-            (not (pos? (:energy prey))))
+  (when (and (not (:dead? prey))
+             (or (> (rand)
+                    (util/survival-probability (:age prey) (get-in prey [:dna :max-age])))
+                 (not (pos? (:energy prey)))))
     [{:type       :die
       :actor-id   (:id prey)
       :actor-type :prey}]))
@@ -109,8 +118,7 @@
     [{:type       :spawn
       :actor-id   (:id prey)
       :actor-type :prey
-      :children   (map (fn [child] (new-prey (merge child
-                                                    (select-keys prey [:x :y :generation]))))
+      :children   (map (fn [child] (new-prey (merge child (select-keys prey [:x :y :generation]))))
                        (:children prey))}]))
 
 (defn avoid-death [prey state]
@@ -138,7 +146,8 @@
     (some identity (map needs->event (get-in prey [:dna :priority])))))
 
 (defn take-decision [prey state]
-  (or (die prey)
+  (or (decompose prey)
+      (die prey)
       (give-birth prey)
       (avoid-death prey state)
       (interact prey state)

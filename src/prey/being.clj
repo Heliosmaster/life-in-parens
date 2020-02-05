@@ -4,6 +4,15 @@
 (defn alive? [being]
   (not (:dead? being)))
 
+(defn die [being]
+  (when (and (alive? being)
+             (or (> (rand)
+                    (util/survival-probability (:age being) (get-in being [:dna :max-age])))
+                 (not (pos? (:energy being)))))
+    [{:type       :die
+      :actor-id   (:id being)
+      :actor-type (:type being)}]))
+
 (defn viable-mate? [being candidate-mate]
   (and (alive? candidate-mate)
        (not= (:gender being)
@@ -24,8 +33,8 @@
         [food-id food] (util/closest (get state food-key) being) ;; TODO Maybe not use the closest always? DNA?
         competitors (util/around (get state food-key) being (fn [_being other] (alive? other)))]
     (when (and food
-             (or (not (get-in being [:dna :avoids-competitors?]))
-                 (<= (count competitors) (get-in being [:dna :competition-threshold]))))
+               (or (not (get-in being [:dna :avoids-competitors?]))
+                   (<= (count competitors) (get-in being [:dna :competition-threshold]))))
       (let [move-action (first (util/move-towards-tx being food (:terrain state)))]
         (if (and (= (:destination move-action)
                     (util/position food))

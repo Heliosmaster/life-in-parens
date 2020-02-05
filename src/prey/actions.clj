@@ -91,6 +91,10 @@
         (update-in [:predators (:actor-id action) :energy] + (:nutrition action)))
     state))
 
+(defmethod resolve-action [:predator :die]
+  [state action]
+  (update-in state [:predators] dissoc (:actor-id action)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmethod resolve-action [:food :new]

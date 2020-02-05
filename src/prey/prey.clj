@@ -86,7 +86,7 @@
        (into {})))
 
 (defn debug-initialize []
-  (->> [(new-prey {:x 0 :y 0 :gender :male})
+  {} #_(->> [(new-prey {:x 0 :y 0 :gender :male})
         #_(new-prey {:x 2 :y 2 :gender :female})
         #_(new-prey {:x 7 :y 5 :gender :male})
         #_(new-prey {:x 1 :y 6 :gender :female})]
@@ -101,14 +101,7 @@
         :actor-id   (:id prey)
         :actor-type :prey}])))
 
-(defn die [prey]
-  (when (and (not (:dead? prey))
-             (or (> (rand)
-                    (util/survival-probability (:age prey) (get-in prey [:dna :max-age])))
-                 (not (pos? (:energy prey)))))
-    [{:type       :die
-      :actor-id   (:id prey)
-      :actor-type :prey}]))
+
 
 (defn give-birth [prey]
   (when (and (= :female (:gender prey))
@@ -147,7 +140,7 @@
 
 (defn take-decision [prey state]
   (or (decompose prey)
-      (die prey)
+      (being/die prey)
       (give-birth prey)
       (avoid-death prey state)
       (interact prey state)

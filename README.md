@@ -1,18 +1,15 @@
-# prey
+# Life in parens: simulating an ecosystem with Clojure
 
-A Quil sketch designed to ... well, that part is up to you.
+Nature is the sum of a large amount of complex ecosystems, where different species coexist in a fragile equilibrium.
 
-## Usage
+In this talk, we will simulate our very own ecosystem with Clojure, and explore emerging patterns under simple sets of rules.
 
-LightTable - open `core.clj` and press `Ctrl+Shift+Enter` to evaluate the file.
-
-Emacs - run cider, open `core.clj` and press `C-c C-k` to evaluate the file.
-
-REPL - run `(require 'prey.core)`.
+We will have the chance of creating our own little creatures and observe them thrive, compete and evolve, as they struggle for their own existence.
 
 ## License
 
-Copyright © 2016 FIXME
+Copyright © 2019-2020 Davide Taviani
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+This program and the accompanying materials are made available under the terms of the Eclipse Public License 2.0 which is available at http://www.eclipse.org/legal/epl-2.0.
+
+

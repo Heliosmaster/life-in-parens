@@ -58,6 +58,46 @@
                  (point (* width i) (* height p)))
                ps))
 
+(def colors [[255 0 0]
+              [0 0 255]])
+
+(defn draw-multiple [{:keys [truncate-at adapt? rounding-at] :as _options} {:keys [data last-tick]}]
+  (q/no-stroke)
+  (q/fill 255)
+  (q/rect 0 0 total-size total-size)
+  (q/fill 255)
+  (q/rect offset offset size size)
+  (let [datasets (map (fn [d]
+                        (cond
+                          truncate-at (take-last truncate-at d) ;; maybe use subvec) (if-let [truncate-at (:truncate-at options)]
+                          adapt? (adapt-points d)
+                          :else d))
+                      data)
+        all-data (apply concat datasets)]
+    (when (seq all-data)
+      (when (and truncate-at
+                 (>= last-tick truncate-at))
+        (draw-vertical-lines truncate-at last-tick))
+      (let [max-point (apply max all-data)
+            height (/ size max-point)]
+        (when max-point (draw-size-lines {:max-point   max-point
+                                          :height      height
+                                          :rounding-at (or rounding-at 1)}))
+        (doall
+          (map-indexed
+            (fn [i d]
+              (let [ps d
+                    width (/ size (count ps))
+
+                    points (points ps width height)]
+                (q/stroke-weight 1)
+                (apply q/stroke (get colors i))
+                (doall
+                  (for [[[x1 y1] [x2 y2]] (partition 2 1 points)]
+                    (q/line x1 y1 x2 y2)))))
+            datasets))))))
+
+
 (defn draw [{:keys [truncate-at adapt? rounding-at] :as _options} {:keys [data last-tick]}]
   (q/no-stroke)
   (q/fill 255)
@@ -66,7 +106,7 @@
   (q/rect offset offset size size)
   (when (seq data)
     (let [ps (cond
-               truncate-at (take-last truncate-at data) ;; maybe use subvec) (if-let [truncate-at (:truncate-at options)]
+               truncate-at (take-last truncate-at data)     ;; maybe use subvec) (if-let [truncate-at (:truncate-at options)]
                adapt? (adapt-points data)
                :else data)
           width (/ size (count ps))
@@ -76,8 +116,8 @@
       (when (and truncate-at
                  (>= last-tick truncate-at))
         (draw-vertical-lines truncate-at last-tick))
-      (when max-point (draw-size-lines {:max-point max-point
-                                        :height height
+      (when max-point (draw-size-lines {:max-point   max-point
+                                        :height      height
                                         :rounding-at (or rounding-at 1)}))
       (q/stroke-weight 1)
       (q/stroke 255 0 0)
@@ -93,7 +133,7 @@
   (q/rect offset offset size size)
   (when (seq data)
     (let [point-sets (if-let [truncate-at (:truncate-at options)]
-                       (take-last truncate-at data) ;; maybe use subvec
+                       (take-last truncate-at data)         ;; maybe use subvec
                        data)
           mins (map :min point-sets)
           maxs (map :max point-sets)
@@ -107,8 +147,8 @@
       (when (and (:truncate-at options)
                  (>= last-tick (:truncate-at options)))
         (draw-vertical-lines (:truncate-at options) last-tick))
-      (when max-point (draw-size-lines {:max-point max-point
-                                        :height height
+      (when max-point (draw-size-lines {:max-point   max-point
+                                        :height      height
                                         :rounding-at (or (:rounding-at options) 1)}))
       (q/stroke-weight 1)
       (q/stroke 255 0 0)
@@ -127,7 +167,7 @@
 (def lim 1002)
 
 (def test-data
-  {:data (range 1 lim)
+  {:data      (range 1 lim)
    :last-tick lim})
 
 (defn test-line-chart [input]
@@ -171,9 +211,26 @@
     ; setup function called only once, during sketch initialization.
     :setup (constantly (get @input-atom plot-key))
     ; update-state is called on each iteration before draw-state.
-    :update (fn [_state] {:data (get-in (deref input-atom) [:data plot-key])
+    :update (fn [_state] {:data      (get-in (deref input-atom) [:data plot-key])
                           :last-tick (get-in (deref input-atom) [:data :last-tick])})
     :draw (partial draw (merge options {:truncate-at size}))
+    :features [:keep-on-top]
+    ; This sketch uses functional-mode middleware.
+    ; Check quil wiki for more info about middlewares and particularly
+    ; fun-mode.
+    :middleware [m/fun-mode])
+  )
+
+(defn live-lines-chart [input-atom plot-keys options]
+  (q/sketch
+    :title (:title options)
+    :size [total-size total-size]
+    ; setup function called only once, during sketch initialization.
+    :setup (constantly (map #(get @input-atom %) plot-keys))
+    ; update-state is called on each iteration before draw-state.
+    :update (fn [_state] {:data      (map #(get-in (deref input-atom) [:data %]) plot-keys)
+                          :last-tick (get-in (deref input-atom) [:data :last-tick])})
+    :draw (partial draw-multiple (merge options {:truncate-at size}))
     :features [:keep-on-top]
     ; This sketch uses functional-mode middleware.
     ; Check quil wiki for more info about middlewares and particularly
@@ -188,7 +245,7 @@
     ; setup function called only once, during sketch initialization.
     :setup (constantly (get @input-atom plot-key))
     ; update-state is called on each iteration before draw-state.
-    :update (fn [_state] {:data (get-in (deref input-atom) [:data plot-key])
+    :update (fn [_state] {:data      (get-in (deref input-atom) [:data plot-key])
                           :last-tick (get-in (deref input-atom) [:data :last-tick])})
     :draw (partial draw-min-max-avg (merge options {:truncate-at size}))
     :features [:keep-on-top]

@@ -14,10 +14,11 @@
     [quil.core :as q]
     [quil.middleware :as m]))
 
-(def initial-live-run {:data {:population-size []
-                              :generation      []
-                              :energies        []
-                              :last-tick       0}})
+(def initial-live-run {:data {:prey-population     []
+                              :predator-population []
+                              :generation          []
+                              :energies            []
+                              :last-tick           0}})
 (def initial-last-run {})
 
 (defonce last-run (atom initial-last-run))
@@ -44,24 +45,26 @@
          (map (fn [[gene values]] [gene (double (util/mean values))]))
          (into {}))))
 
-(defn preys-stats [preys]
+(defn stats [preys predators]
   (let [generations (map :generation preys)
         energies (map :energy preys)]
-    {:generation      (when (seq generations) (triplet generations))
-     :population-size (count preys)
-     :energies        (when (seq energies) (triplet energies))}))
+    {:generation          (when (seq generations) (triplet generations))
+     :prey-population     (count preys)
+     :predator-population (count predators)
+     :energies            (when (seq energies) (triplet energies))}))
 
-(defn save-stats [state]
+(defn save-stats [{:keys [preys predators] :as state}]
   (when-not config/debug?
-    (swap! live-stats (fn [a] (if-let [preys (seq (:preys state))]
-                                (let [stats (preys-stats (vals preys))]
+    (swap! live-stats (fn [a] (if (and (seq preys) (seq predators))
+                                (let [stats (stats (vals preys) (vals predators))]
                                   (-> a
                                       (assoc-in [:data :last-tick] (q/frame-count))
-                                      (update-in [:data :population-size] (fnil conj []) (:population-size stats))
+                                      (update-in [:data :predator-population] (fnil conj []) (:predator-population stats))
+                                      (update-in [:data :prey-population] (fnil conj []) (:prey-population stats))
                                       (update-in [:data :generation] (fnil conj []) (:generation stats))
                                       (update-in [:data :energies] (fnil conj []) (:energies stats))))
                                 a)))
-    (swap! last-run (fn [a] (if-let [preys (seq (:preys state))]
+    (swap! last-run (fn [a] (if (seq preys)
                               (update a :preys (fnil conj []) (vals preys))
                               a))))
   state)
@@ -78,8 +81,8 @@
 
 (defn analyze-last-run []
   (let [stats (->> (:preys @last-run)
-                   (map preys-stats))]
-    (chart/line-chart {:data  (map :population-size stats)
+                   (map stats))]
+    (chart/line-chart {:data  (map :prey-population stats)
                        :title "Population"}
                       {})))
 
@@ -103,7 +106,7 @@
     (pprint/pprint a)))
 
 (defn print-stats [state]
-  (let [{:keys [nmales nfemales]} (preys-stats state)]
+  (let [{:keys [nmales nfemales]} (stats state)]
     (prn (format "%5d: Male: %5d - Female: %5d - Ratio: %2.2f" (q/frame-count) nmales nfemales (if (and (pos? nmales)
                                                                                                         (pos? nfemales))
                                                                                                  (double (/ nmales nfemales))
@@ -227,8 +230,11 @@
     ; fun-mode.
     :middleware [m/fun-mode])
   #_(async/thread
-      (chart/live-line-chart live-stats :population-size {:title       "Population"
+      (chart/live-line-chart live-stats :prey-population {:title       "Population"
                                                           :rounding-at 10}))
+  (async/thread
+    (chart/live-lines-chart live-stats [:prey-population :predator-population] {:title       "Population"
+                                                                                :rounding-at 10}))
   #_(async/thread
       (chart/live-min-max-avg-chart live-stats :energies {:title       "Energies"
                                                           :rounding-at 1})))

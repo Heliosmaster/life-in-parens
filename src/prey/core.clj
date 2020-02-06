@@ -55,18 +55,17 @@
 
 (defn save-stats [{:keys [preys predators] :as state}]
   (when-not config/debug?
-    (swap! live-stats (fn [a] (if (and (seq preys) (seq predators))
-                                (let [stats (stats (vals preys) (vals predators))]
-                                  (-> a
-                                      (assoc-in [:data :last-tick] (q/frame-count))
-                                      (update-in [:data :predator-population] (fnil conj []) (:predator-population stats))
-                                      (update-in [:data :prey-population] (fnil conj []) (:prey-population stats))
-                                      (update-in [:data :generation] (fnil conj []) (:generation stats))
-                                      (update-in [:data :energies] (fnil conj []) (:energies stats))))
-                                a)))
-    (swap! last-run (fn [a] (if (seq preys)
-                              (update a :preys (fnil conj []) (vals preys))
-                              a))))
+    (swap! live-stats (fn [a]
+                        (let [stats (stats (vals preys) (vals predators))]
+                          (-> a
+                              (assoc-in [:data :last-tick] (q/frame-count))
+                              (update-in [:data :predator-population] (fnil conj []) (:predator-population stats))
+                              (update-in [:data :prey-population] (fnil conj []) (:prey-population stats))
+                              (update-in [:data :generation] (fnil conj []) (:generation stats))
+                              (update-in [:data :energies] (fnil conj []) (:energies stats))))))
+    (swap! last-run (fn [a] (-> a
+                                (update :preys (fnil conj []) (vals preys))
+                                (update :predators (fnil conj []) (vals predators))))))
   state)
 
 (defn last-gen []
@@ -76,15 +75,7 @@
   (let [average-dnas (map average-dna (:preys @last-run))
         genes (keys (last average-dnas))]
     (doseq [gene genes]
-      (chart/line-chart {:data (map gene average-dnas)} {:adapt? true :title (str/capitalize (name gene))}))))
-
-
-(defn analyze-last-run []
-  (let [stats (->> (:preys @last-run)
-                   (map stats))]
-    (chart/line-chart {:data  (map :prey-population stats)
-                       :title "Population"}
-                      {})))
+      (chart/line-chart {:data [(map gene average-dnas)]} {:adapt? true :title (str/capitalize (name gene))}))))
 
 (defn print-preys [state]
   (prn "------------")
@@ -229,9 +220,6 @@
     ; Check quil wiki for more info about middlewares and particularly
     ; fun-mode.
     :middleware [m/fun-mode])
-  #_(async/thread
-      (chart/live-line-chart live-stats :prey-population {:title       "Population"
-                                                          :rounding-at 10}))
   (async/thread
     (chart/live-lines-chart live-stats [:prey-population :predator-population] {:title       "Population"
                                                                                 :rounding-at 10}))

@@ -25,11 +25,12 @@
    :avoids-competitors?   (rand-nth [true false])
    :desire-threshold      (util/rand-int-1 1024)
    :energy-threshold      (util/rand-int-1 128)
-   :offspring-energy      20
+   :offspring-energy      (util/rand-between 15 30)
    :priority              (shuffle [:food :mate])
    :gestation             (util/rand-int-1 32)
    :maturity-at           (util/rand-int-1 128)
    :nutrition             (util/rand-int-1 32)
+   :sight-radius          (util/rand-between 2 5)
    :max-age               (util/rand-int-1 1024)
    :speed                 (util/rand-int-1 8)})
 
@@ -48,6 +49,7 @@
                                :desire-threshold      (:desire-threshold prey-config)
                                :energy-threshold      (:energy-threshold prey-config)
                                :priority              [:mate :food]
+                               :sight-radius          (:sight-radius prey-config)
                                :gestation             (:gestation prey-config)
                                :maturity-at           (:maturity-at prey-config)
                                :nutrition             (:nutrition prey-config)

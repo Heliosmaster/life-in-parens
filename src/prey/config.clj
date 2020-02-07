@@ -13,7 +13,7 @@
               :dead-color            [211 187 146]
               :pregnant-color        [255 0 0]
               :sight-radius          5
-              :initial-density       0.025
+              :initial-density       0.035
               :offspring-energy      30
               :initial-energy        40                     ;; TODO remove
               :gestation             5
@@ -35,7 +35,7 @@
               :direction-inertia    10
               :sight-radius         7
               :mutation-probability 0.1
-              :initial-density      0.01}
-   :food     {:density  0.02
+              :initial-density      0.0025}
+   :food     {:density  0.03
               :color    [35 89 8]
               :lifespan 10}})

@@ -6,7 +6,7 @@
   (UUID/randomUUID))
 
 (defn sight-box [being]
-  (let [sr (get-in config/config [(:type being) :sight-radius])]
+  (let [sr (get-in being [:dna :sight-radius])]
     {:xmin (- (:x being) sr)
      :xmax (+ (:x being) sr)
      :ymin (- (:y being) sr)
@@ -191,6 +191,9 @@
 (defn mean [coll]
   (/ (reduce + 0 coll)
      (count coll)))
+
+(defn rand-between [min max]
+  (+ min (rand-int (- max min))))
 
 (defn rand-int-1 [max]
   (inc (rand-int (dec max))))

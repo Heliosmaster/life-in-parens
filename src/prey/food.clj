@@ -19,7 +19,8 @@
        (into {})))
 
 (defn debug-initialize-food []
-  (->> [(new-food {:x 5 :y 5})]
+  (->> [(new-food {:x 5 :y 5})
+        (new-food {:x 2 :y 0})]
        (map (juxt :id identity))
        (into {})))
 

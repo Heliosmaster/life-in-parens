@@ -7,16 +7,17 @@
 (def predator-config (:predator config/config))
 
 (defn new-genome []
-  {:speed            2
+  {:speed            1
    :energy-threshold 100
-   :litter-size      1
-   :desire-threshold 100
-   :offspring-energy 50
+   :litter-size      2
+   :desire-threshold 50
+   :offspring-energy 150
    :gestation        20
+   :sight-radius     8
    :priority         [:mate :food]
-   :nutrition        200
+   :nutrition        20
    :maturity-at      10
-   :max-age          1000})
+   :max-age          400})
 
 (defn mutate-predator [[gene value]]
   (if (< (rand) (:mutation-probability predator-config))
@@ -51,22 +52,40 @@
    :id                   (util/new-id)
    :type                 :predator})
 
+(defn hunt [being state]
+  (let [[prey-id prey] (util/closest (:preys state) being (fn [_being prey] (being/alive? prey)))
+        competitors (util/around (:preys state) being (fn [_being other] (being/alive? other)))]
+    (when (and prey
+               (or (not (get-in being [:dna :avoids-competitors?]))
+                   (<= (count competitors) (get-in being [:dna :competition-threshold]))))
+      (let [move-action (first (util/move-towards-tx being prey (:terrain state)))]
+        (if (and (= (:destination move-action)
+                      (util/position prey))
+                   (:catch? being))
+            [move-action
+             {:type       :kill
+              :actor-id   (:id being)
+              :actor-type (:type being)
+              :nutrition  (get-in being [:dna :nutrition])
+              :target-id  prey-id}]
+            [move-action])))))
+
 
 (defn initialize [terrain]
-  (->> #_(for [x (range 0 config/grid-size)
-               y (range 0 config/grid-size)
-               :let [p (rand)]
-               :when (and (<= p (:initial-density predator-config))
-                          (not (contains? terrain [x y])))]
-           (new-predator {:x x :y y}))
-    [(new-predator {:x 10 :y 10 :gender :male})
-     (new-predator {:x 10 :y 11 :gender :female})]
-    (map (juxt :id identity))
-    (into {})))
+  (->> (for [x (range 0 config/grid-size)
+             y (range 0 config/grid-size)
+             :let [p (rand)]
+             :when (and (<= p (:initial-density predator-config))
+                        (not (contains? terrain [x y])))]
+         (new-predator {:x x :y y}))
+       #_[(new-predator {:x 10 :y 10 :gender :male})
+          (new-predator {:x 10 :y 11 :gender :female})]
+       (map (juxt :id identity))
+       (into {})))
 
 (defn debug-initialize []
-  {} #_(->> [(new-predator {:x 1 :y 2 :gender :male})
-        (new-predator {:x 3 :y 3 :gender :female})]
+  (->> [(new-predator {:x 1 :y 2 :gender :male})
+        #_(new-predator {:x 3 :y 3 :gender :female})]
        (map (juxt :id identity))
        (into {})))
 
@@ -75,4 +94,5 @@
       (being/give-birth predator new-predator)
       (being/interact predator state mutate-predator)
       (being/fullfil-desires predator state)
+      (hunt predator state)
       (util/move-randomly-tx predator (:terrain state))))

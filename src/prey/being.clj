@@ -5,10 +5,12 @@
   (not (:dead? being)))
 
 (def relations
-  {:prey     {:eat  :food
-              :mate :preys}
-   :predator {:eat  :preys
-              :mate :predators}})
+  {:prey     {:eat            :food
+              :filter-food-fn (constantly true)
+              :mate           :preys}
+   :predator {:eat            :preys
+              :filter-food-fn (fn [_being other] (:dead? other))
+              :mate           :predators}})
 
 (defn die [being]
   (when (and (alive? being)
@@ -38,23 +40,24 @@
       (get-in being [:dna :energy-threshold])))
 
 (defn find-food-tx [being state]
-  (let [food-key (get-in relations [(:type being) :eat])
-        [food-id food] (util/closest (get state food-key) being) ;; TODO Maybe not use the closest always? DNA?
+  (let [food-key (get-in relations [(:type being) :eat])    ;; TODO Maybe not use the closest always? DNA?
+        [_food-id food] (util/closest (get state food-key) being (get-in relations [(:type being) :filter-food-fn]))
         competitors (util/around (get state food-key) being (fn [_being other] (alive? other)))]
     (when (and food
                (or (not (get-in being [:dna :avoids-competitors?]))
                    (<= (count competitors) (get-in being [:dna :competition-threshold]))))
       (let [move-action (first (util/move-towards-tx being food (:terrain state)))]
-        (if (and (= (:destination move-action)
-                    (util/position food))
-                 (:catch? being))
-          [move-action
-           {:type       :kill
-            :actor-id   (:id being)
-            :actor-type (:type being)
-            :nutrition  (get-in being [:dna :nutrition])
-            :target-id  food-id}]
-          [move-action])))))
+        [move-action]
+        #_(if (and (= (:destination move-action)
+                      (util/position food))
+                   (:catch? being))
+            [move-action
+             {:type       :kill
+              :actor-id   (:id being)
+              :actor-type (:type being)
+              :nutrition  (get-in being [:dna :nutrition])
+              :target-id  food-id}]
+            [move-action])))))
 
 
 (defn find-mate-tx [being state]
@@ -79,7 +82,7 @@
                  (into {}))]
     {;; TODO add positive effect to longer gestations
      :energy (:offspring-energy dna)
-     :dna dna}))
+     :dna    dna}))
 
 (defn give-birth [being new-being-fn]
   (when (and (= :female (:gender being))

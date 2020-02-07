@@ -191,8 +191,8 @@
   (apply q/background config/background-color)
   (draw-terrain state)
   (let [beings (concat (vals (:food state))
-                       (vals (:predators state))
-                       (vals (:preys state)))]
+                       (vals (:preys state))
+                       (vals (:predators state)))]
     (doseq [being beings]
       (let [xx (->size (:x being))
             yy (->size (:y being))]

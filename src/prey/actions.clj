@@ -36,10 +36,10 @@
                                 (= :female (:gender prey)) (merge {:pregnant? true
                                                                    :children  (:children action)})))))
 
-(defn eat-while-pregnant [prey action]
-  (-> prey
+(defn eat-while-pregnant [being action]
+  (-> being
       (update :energy + (- (:nutrition action)
-                           (count (:children prey))))
+                           (count (:children being))))
       (update :children (fn [children] (map (fn [child] (update child :energy inc))
                                             children)))))
 
@@ -85,8 +85,9 @@
   [state action]
   (if (get-in state [:preys (:target-id action)])
     (-> state
-        (update-in [:preys] dissoc (:target-id action))
-        (update-in [:predators (:actor-id action) :energy] + (:nutrition action)))
+        (update-in [:preys (:target-id action)] merge {:dead?      true
+                                                       :dead-since 0})
+        #_(update-in [:predators (:actor-id action) :energy] + (:nutrition action)))
     state))
 
 (defmethod resolve-action [:predator :die]
@@ -100,6 +101,18 @@
                                     :always (assoc :desire 0)
                                     (= :female (:gender predator)) (merge {:pregnant? true
                                                                            :children  (:children action)})))))
+
+(defmethod resolve-action [:predator :eat-food]
+  [state action]
+  (if (get-in state [:preys (:target-id action)])
+    (-> state
+        (update-in [:predators (:actor-id action)]
+                   (fn [predator]
+                     (if (:pregnant? predator)
+                       (eat-while-pregnant predator action)
+                       (update predator :energy + (:nutrition action)))))
+        (update-in [:preys] dissoc (:target-id action)))
+    state))
 
 (defmethod resolve-action [:predator :spawn]
   [state action]

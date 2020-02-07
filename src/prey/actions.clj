@@ -70,8 +70,6 @@
   [state _action]
   state)
 
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmethod resolve-action [:predator :move]                 ;; TODO refactor duped code?

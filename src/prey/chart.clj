@@ -40,8 +40,7 @@
       (q/text (str (* s nearest-round)) 20 (- total-size (+ offset (* height s nearest-round))))
       (q/stroke 0)
       (q/stroke 221 219 221)
-      (q/line (point 0 (* height s nearest-round)) (point size (* height s nearest-round)))
-      )))
+      (q/line (point 0 (* height s nearest-round)) (point size (* height s nearest-round))))))
 
 (defn draw-vertical-lines [truncate-at last-tick]
   (let [first-tick (- last-tick truncate-at)

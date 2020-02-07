@@ -11,6 +11,7 @@
    :energy-threshold 100
    :litter-size      1
    :desire-threshold 100
+   :offspring-energy 50
    :gestation        20
    :priority         [:mate :food]
    :nutrition        200
@@ -22,12 +23,12 @@
     [gene (get (new-genome) gene)]
     [gene value]))
 
-(defn new-predator [{:keys [x y gender dna energy generation]}]
+(defn new-predator [{:keys [x y gender dna generation]}]
   {:x                    x
    :y                    y
    :age                  0
    :generation           (if generation (inc generation) 1)
-   :energy               (or energy 100 #_(:initial-energy predator-config))
+   :energy               100
    :desire               0
    :dead?                false
    :catch?               true                               ;; TODO DNA encode this? Maybe see that it will be selected?
@@ -64,7 +65,7 @@
     (into {})))
 
 (defn debug-initialize []
-  (->> [(new-predator {:x 1 :y 2 :gender :male})
+  {} #_(->> [(new-predator {:x 1 :y 2 :gender :male})
         (new-predator {:x 3 :y 3 :gender :female})]
        (map (juxt :id identity))
        (into {})))

@@ -1,7 +1,7 @@
 (ns prey.config)
 
 (def debug? false)
-(def grid-size (if debug? 10 40))
+(def grid-size (if debug? 10 50))
 (def unit-size 10)
 (def world-size (* grid-size unit-size))
 (def fps (if debug? 1 20))
@@ -14,7 +14,8 @@
               :pregnant-color        [255 0 0]
               :sight-radius          5
               :initial-density       0.025
-              :initial-energy        40
+              :offspring-energy      30
+              :initial-energy        40                     ;; TODO remove
               :gestation             5
               :litter-size           3
               :maturity-at           10

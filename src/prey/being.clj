@@ -28,7 +28,8 @@
            (get-in being [:dna :desire-threshold]))))
 
 (defn viable-mate? [being candidate-mate]
-  (and (alive? candidate-mate)                              ;; TODO maybe add mating? also
+  (and (alive? candidate-mate)
+       (mating? candidate-mate)
        (not= (:gender being)
              (:gender candidate-mate))))
 
@@ -70,15 +71,15 @@
           (util/move-towards-tx being mate (:terrain state)))))))
 
 (defn new-embryo [mother father mutate-fn]
-  {:energy 20 #_(* (get-in mother [:dna :gestation]))
-   ;; TODO dna encode this hardcoded number at least +
-   ;; add positive effect to longer gestations
-   :dna    (->> (keys (:dna mother))
-                (map (fn [gene]
-                       [gene (rand-nth [(get-in mother [:dna gene])
-                                        (get-in father [:dna gene])])]))
-                (map mutate-fn)
-                (into {}))})
+  (let [dna (->> (keys (:dna mother))
+                 (map (fn [gene]
+                        [gene (rand-nth [(get-in mother [:dna gene])
+                                         (get-in father [:dna gene])])]))
+                 (map mutate-fn)
+                 (into {}))]
+    {;; TODO add positive effect to longer gestations
+     :energy (:offspring-energy dna)
+     :dna dna}))
 
 (defn give-birth [being new-being-fn]
   (when (and (= :female (:gender being))

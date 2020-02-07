@@ -25,6 +25,7 @@
    :avoids-competitors?   (rand-nth [true false])
    :desire-threshold      (util/rand-int-1 1024)
    :energy-threshold      (util/rand-int-1 128)
+   :offspring-energy      20
    :priority              (shuffle [:food :mate])
    :gestation             (util/rand-int-1 32)
    :maturity-at           (util/rand-int-1 128)
@@ -43,6 +44,7 @@
    :dna               (or dna {:litter-size           (:litter-size prey-config)
                                :competition-threshold (:competition-threshold prey-config)
                                :avoids-competitors?   false
+                               :offspring-energy      (:offspring-energy prey-config)
                                :desire-threshold      (:desire-threshold prey-config)
                                :energy-threshold      (:energy-threshold prey-config)
                                :priority              [:mate :food]
@@ -62,7 +64,6 @@
     [gene (get (new-genome) gene)]
     [gene value]))
 
-
 (defn initialize [terrain]
   (->> (for [x (range 0 config/grid-size)
              y (range 0 config/grid-size)
@@ -74,8 +75,8 @@
        (into {})))
 
 (defn debug-initialize []
-  {} #_(->> [(new-prey {:x 0 :y 0 :gender :male})
-        #_(new-prey {:x 2 :y 2 :gender :female})
+  (->> [(new-prey {:x 0 :y 0 :gender :male})
+        (new-prey {:x 2 :y 2 :gender :female})
         #_(new-prey {:x 7 :y 5 :gender :male})
         #_(new-prey {:x 1 :y 6 :gender :female})]
        (map (juxt :id identity))
@@ -88,10 +89,6 @@
       [{:type       :decompose
         :actor-id   (:id prey)
         :actor-type :prey}])))
-
-
-
-
 
 (defn avoid-death [prey state]
   (let [predators (vals (util/around (:predators state) prey))]

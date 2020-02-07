@@ -6,7 +6,7 @@
   (UUID/randomUUID))
 
 (defn sight-box [being]
-  (let [sr config/sight-radius]
+  (let [sr (get-in config/config [(:type being) :sight-radius])]
     {:xmin (- (:x being) sr)
      :xmax (+ (:x being) sr)
      :ymin (- (:y being) sr)
@@ -53,11 +53,11 @@
          (<= 0 (:y new-pos) (dec config/grid-size))
          (not (contains? terrain [(:x new-pos) (:y new-pos)])))))
 
-(defn move-randomly-tx [source terrain]
+(defn move-randomly-tx [being terrain]
   (loop [step-n 1
-         direction-inertia (:direction-inertia source)
-         current-direction (:direction source)
-         pos (position source)]
+         direction-inertia (:direction-inertia being)
+         current-direction (:direction being)
+         pos (position being)]
     (let [valid-directions (filter #(valid-direction? pos % terrain)
                                    [:north :south :east :west])]
       (if (seq valid-directions)
@@ -67,12 +67,12 @@
                               (rand-nth valid-directions))
               new-inertia (if (= current-direction new-direction)
                             (dec direction-inertia)
-                            (get-in config/config [(:type source) :direction-inertia]))
-              new-pos (take-one-step source new-direction)]
-          (if (= step-n (get-in source [:dna :speed]))
+                            (get-in config/config [(:type being) :direction-inertia]))
+              new-pos (take-one-step being new-direction)]
+          (if (= step-n (get-in being [:dna :speed]))
             [{:type        :move
-              :actor-id    (:id source)
-              :actor-type  (:type source)
+              :actor-id    (:id being)
+              :actor-type  (:type being)
               :destination new-pos
               :direction   new-direction
               :new-inertia new-inertia}]
@@ -80,13 +80,13 @@
                    new-inertia
                    new-direction
                    new-pos)))
-        (if (= pos (position source))
-          [{:type     :wait
-            :actor-id (:id source)
-            :actor-type (:type source)}]
+        (if (= pos (position being))
+          [{:type       :wait
+            :actor-id   (:id being)
+            :actor-type (:type being)}]
           [{:type        :move
-            :actor-id    (:id source)
-            :actor-type  (:type source)
+            :actor-id    (:id being)
+            :actor-type  (:type being)
             :destination pos
             :direction   current-direction
             :new-inertia direction-inertia}])))))

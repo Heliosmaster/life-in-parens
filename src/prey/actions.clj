@@ -11,7 +11,7 @@
 
 (defmethod resolve-action [:prey :die]
   [state action]
-  (update-in state [:preys (:actor-id action)] merge {:dead? true
+  (update-in state [:preys (:actor-id action)] merge {:dead?      true
                                                       :dead-since 0}))
 
 (defmethod resolve-action [:prey :decompose]
@@ -94,6 +94,24 @@
 (defmethod resolve-action [:predator :die]
   [state action]
   (update-in state [:predators] dissoc (:actor-id action)))
+
+(defmethod resolve-action [:predator :mate]
+  [state action]
+  (update-in state [:predators (:actor-id action)]
+             (fn [predator] (cond-> predator
+                                    :always (assoc :desire 0)
+                                    (= :female (:gender predator)) (merge {:pregnant? true
+                                                                           :children  (:children action)})))))
+
+(defmethod resolve-action [:predator :spawn]
+  [state action]
+  (-> state
+      (assoc-in [:predators (:actor-id action) :pregnant?] false)
+      (assoc-in [:predators (:actor-id action) :pregnancy] 0)
+      (update-in [:predators (:actor-id action)] dissoc :children)
+      (update-in [:predators] merge (->> (:children action)
+                                         (map (juxt :id identity))
+                                         (into {})))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

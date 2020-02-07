@@ -6,21 +6,33 @@
 
 (def predator-config (:predator config/config))
 
+(defn new-genome []
+  {:speed            2
+   :energy-threshold 100
+   :litter-size      1
+   :desire-threshold 100
+   :gestation        20
+   :priority         [:mate :food]
+   :nutrition        200
+   :maturity-at      10
+   :max-age          1000})
+
+(defn mutate-predator [[gene value]]
+  (if (< (rand) (:mutation-probability predator-config))
+    [gene (get (new-genome) gene)]
+    [gene value]))
+
 (defn new-predator [{:keys [x y gender dna energy generation]}]
-  {:x                 x
-   :y                 y
-   :age               0
-   :generation        (if generation (inc generation) 1)
-   :energy            (or energy 100 #_(:initial-energy predator-config))
-   :desire            0
-   :dead?             false
-   :catch?            true                                  ;; TODO DNA encode this? Maybe see that it will be selected?
-   :dna               {:speed            2
-                       :energy-threshold 100
-                       :desire-threshold 40
-                       :nutrition        20
-                       :maturity-at      10
-                       :max-age          400}
+  {:x                    x
+   :y                    y
+   :age                  0
+   :generation           (if generation (inc generation) 1)
+   :energy               (or energy 100 #_(:initial-energy predator-config))
+   :desire               0
+   :dead?                false
+   :catch?               true                               ;; TODO DNA encode this? Maybe see that it will be selected?
+   :mutation-probability (:mutation-probability predator-config)
+   :dna                  (or dna (new-genome))
    #_#_:dna (or dna {:litter-size           (:litter-size predator-config)
                      :competition-threshold (:competition-threshold predator-config)
                      :avoids-competitors?   false
@@ -32,11 +44,11 @@
                      :nutrition             (:nutrition predator-config)
                      :max-age               (:max-age predator-config)
                      :speed                 (:speed predator-config)})
-   :direction-inertia (:direction-inertia predator-config)
-   :direction         (rand-nth [:north :south :east :west])
-   :gender            (or gender (rand-nth [:male :female]))
-   :id                (util/new-id)
-   :type              :predator})
+   :direction-inertia    (:direction-inertia predator-config)
+   :direction            (rand-nth [:north :south :east :west])
+   :gender               (or gender (rand-nth [:male :female]))
+   :id                   (util/new-id)
+   :type                 :predator})
 
 
 (defn initialize [terrain]
@@ -46,19 +58,20 @@
                :when (and (<= p (:initial-density predator-config))
                           (not (contains? terrain [x y])))]
            (new-predator {:x x :y y}))
-    [(new-predator {:x 10 :y 10})]
+    [(new-predator {:x 10 :y 10 :gender :male})
+     (new-predator {:x 10 :y 11 :gender :female})]
     (map (juxt :id identity))
     (into {})))
 
 (defn debug-initialize []
   (->> [(new-predator {:x 1 :y 2 :gender :male})
-             #_(new-predator {:x 5 :y 5 :gender :female})]
-            (map (juxt :id identity))
-            (into {})))
+        (new-predator {:x 3 :y 3 :gender :female})]
+       (map (juxt :id identity))
+       (into {})))
 
 (defn take-decision [predator state]
   (or (being/die predator)
-      #_(give-birth prey)
-      #_(interact prey state)
+      (being/give-birth predator new-predator)
+      (being/interact predator state mutate-predator)
       (being/fullfil-desires predator state)
       (util/move-randomly-tx predator (:terrain state))))

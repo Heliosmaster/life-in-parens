@@ -19,7 +19,6 @@
 ;; TODO Memory???
 
 
-
 (defn new-genome []
   {:litter-size           (util/rand-int-1 8)
    :competition-threshold (util/rand-int-1 16)
@@ -58,21 +57,10 @@
    :id                (util/new-id)
    :type              :prey})
 
-(defn mutate [[gene value]]
+(defn mutate-prey [[gene value]]
   (if (< (rand) (:mutation-probability prey-config))
     [gene (get (new-genome) gene)]
     [gene value]))
-
-(defn new-embryo [mother father]
-  {:energy 20 #_(* (get-in mother [:dna :gestation]))       ;; TODO add positive effect to longer gestations
-   :dna    (->> (keys (:dna mother))
-                (map (fn [gene]
-                       [gene (rand-nth [(get-in mother [:dna gene])
-                                        (get-in father [:dna gene])])]))
-                (map mutate)
-                (into {}))})
-
-
 
 
 (defn initialize [terrain]
@@ -103,47 +91,19 @@
 
 
 
-(defn give-birth [prey]
-  (when (and (= :female (:gender prey))
-             (:pregnant? prey)
-             (>= (:pregnancy prey)
-                 (get-in prey [:dna :gestation])))
-    [{:type       :spawn
-      :actor-id   (:id prey)
-      :actor-type :prey
-      :children   (map (fn [child] (new-prey (merge child (select-keys prey [:x :y :generation]))))
-                       (:children prey))}]))
+
 
 (defn avoid-death [prey state]
   (let [predators (vals (util/around (:predators state) prey))]
     (when (seq predators)
       (util/avoid-things-tx prey predators (:terrain state)))))
 
-(defn interact [prey state]
-  (let [[mate-id mate] (util/in-same-space (:preys state) prey being/viable-mate?)
-        [food-id food] (util/in-same-space (:food state) prey)
-        ready-to-mate? (and mate (being/mating? prey) (being/mating? mate))
-        ready-to-eat? (and food (being/hungry? prey))
-        needs->event {:mate (when ready-to-mate? [{:type       :mate
-                                                   :actor-id   (:id prey)
-                                                   :actor-type :prey
-                                                   :children   (repeatedly (get-in prey [:dna :litter-size])
-                                                                           #(new-embryo prey mate))
-
-                                                   :mate-id    mate-id}])
-                      :food (when ready-to-eat? [{:type       :eat-food
-                                                  :actor-id   (:id prey)
-                                                  :actor-type :prey
-                                                  :nutrition  (get-in prey [:dna :nutrition])
-                                                  :target-id  food-id}])}]
-    (some identity (map needs->event (get-in prey [:dna :priority])))))
-
 (defn take-decision [prey state]
   (or (decompose prey)
       (being/die prey)
-      (give-birth prey)
+      (being/give-birth prey new-prey)
       (avoid-death prey state)
-      (interact prey state)
+      (being/interact prey state mutate-prey)
       (being/fullfil-desires prey state)
       (util/move-randomly-tx prey (:terrain state))))
 

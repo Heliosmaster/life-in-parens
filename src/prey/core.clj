@@ -78,16 +78,18 @@
       (chart/line-chart {:data [(map gene average-dnas)]} {:adapt? true :title (str/capitalize (name gene))}))))
 
 (defn print-preys [state]
-  (prn "------------")
-  (prn "PREYS: ")
-  (doseq [[_pid p] (:preys state)]
-    (pprint/pprint p)))
+  (when-let [preys (:preys state)]
+    (prn "------------")
+    (prn "PREYS: ")
+    (doseq [[_pid p] preys]
+      (pprint/pprint p))))
 
 (defn print-predators [state]
-  (prn "------------")
-  (prn "PREDATORS: ")
-  (doseq [[_pid p] (:predators state)]
-    (pprint/pprint p)))
+  (when-let [predators (seq (:predators state))]
+    (prn "------------")
+    (prn "PREDATORS: ")
+    (doseq [[_pid p] predators]
+      (pprint/pprint p))))
 
 (defn print-actions [actions]
   (prn "------------")
@@ -96,13 +98,7 @@
   (doseq [a actions]
     (pprint/pprint a)))
 
-(defn print-stats [state]
-  (let [{:keys [nmales nfemales]} (stats state)]
-    (prn (format "%5d: Male: %5d - Female: %5d - Ratio: %2.2f" (q/frame-count) nmales nfemales (if (and (pos? nmales)
-                                                                                                        (pos? nfemales))
-                                                                                                 (double (/ nmales nfemales))
-                                                                                                 0.0)))))
-(defn color [being]                                         ;; FIXME temporary pregnant just for debugging
+(defn color [being]
   (cond
     (:dead? being) (get-in config/config [(:type being) :dead-color])
     (:pregnant? being) (get-in config/config [(:type being) :pregnant-color])
@@ -155,10 +151,11 @@
 
 
 (defn update-state [state]
-  (let [prey-actions (map (fn [[_prey-id prey]] (prey/take-decision prey state))
-                          (:preys state))
-        predator-actions (map (fn [[_predator-id predator]] (predator/take-decision predator state))
-                              (:predators state))
+  (let [map-fn map #_(when config/debug? map pmap)
+        prey-actions (map-fn (fn [[_prey-id prey]] (prey/take-decision prey state))
+                             (:preys state))
+        predator-actions (map-fn (fn [[_predator-id predator]] (predator/take-decision predator state))
+                                 (:predators state))
         food-actions (food/replenish-food-txs state)
         actions (apply concat (concat predator-actions prey-actions food-actions))]
     (when config/debug?
@@ -180,14 +177,15 @@
             (->size 1)
             (->size 1))))
 
-(defn draw-sight [being]
-  (let [s (util/sight-box being)]
-    (q/fill 0 0 0 0)
-    (q/stroke-weight 1)
-    (q/rect (->size (:xmin s))
-            (->size (:ymin s))
-            (->size (:size s))
-            (->size (:size s)))))
+#_(defn draw-sight [being]
+    (let [s (util/sight-box being)]
+      (q/fill 0 0 0 0)
+      (q/stroke 1)
+      (q/stroke-weight 1)
+      (q/rect (->size (:xmin s))
+              (->size (:ymin s))
+              (->size (:size s))
+              (->size (:size s)))))
 
 (defn draw-state [state]
   (apply q/background config/background-color)
@@ -200,9 +198,7 @@
             yy (->size (:y being))]
         (apply q/fill (color being))
         (q/no-stroke)
-        (q/rect xx yy config/unit-size config/unit-size)
-        #_(when (and config/debug? (= :prey (:type being)))
-            (draw-sight being))))))
+        (q/rect xx yy config/unit-size config/unit-size)))))
 
 (defn run []
   (reset! live-stats initial-live-run)
@@ -220,9 +216,12 @@
     ; Check quil wiki for more info about middlewares and particularly
     ; fun-mode.
     :middleware [m/fun-mode])
-  (async/thread
-    (chart/live-lines-chart live-stats [:prey-population :predator-population] {:title       "Population"
-                                                                                :rounding-at 10}))
+  (when-not config/debug?
+    (async/thread
+      (chart/live-lines-chart live-stats
+                              [:prey-population :predator-population]
+                              {:title       "Population"
+                               :rounding-at 10})))
   #_(async/thread
       (chart/live-min-max-avg-chart live-stats :energies {:title       "Energies"
                                                           :rounding-at 1})))

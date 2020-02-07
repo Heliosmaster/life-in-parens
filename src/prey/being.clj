@@ -4,6 +4,12 @@
 (defn alive? [being]
   (not (:dead? being)))
 
+(def relations
+  {:prey     {:eat  :food
+              :mate :preys}
+   :predator {:eat  :preys
+              :mate :predators}})
+
 (defn die [being]
   (when (and (alive? being)
              (or (> (rand)
@@ -13,23 +19,25 @@
       :actor-id   (:id being)
       :actor-type (:type being)}]))
 
-(defn viable-mate? [being candidate-mate]
-  (and (alive? candidate-mate)
-       (not= (:gender being)
-             (:gender candidate-mate))))
 
 (defn mating? [being]
   (and (>= (:age being)
            (get-in being [:dna :maturity-at]))
+       (not (:pregnant? being))
        (>= (:desire being)
            (get-in being [:dna :desire-threshold]))))
+
+(defn viable-mate? [being candidate-mate]
+  (and (alive? candidate-mate)                              ;; TODO maybe add mating? also
+       (not= (:gender being)
+             (:gender candidate-mate))))
 
 (defn hungry? [being]
   (<= (:energy being)
       (get-in being [:dna :energy-threshold])))
 
 (defn find-food-tx [being state]
-  (let [food-key (if (= (:type being) :prey) :food :preys)  ;; TODO refactor this (maybe as a key in the being itself?
+  (let [food-key (get-in relations [(:type being) :eat])
         [food-id food] (util/closest (get state food-key) being) ;; TODO Maybe not use the closest always? DNA?
         competitors (util/around (get state food-key) being (fn [_being other] (alive? other)))]
     (when (and food
@@ -49,9 +57,8 @@
 
 
 (defn find-mate-tx [being state]
-
   (when (mating? being)
-    (let [mate-key (if (= (:type being) :prey) :preys :predators) ;; TODO refactor this (maybe as a key in the being itself?
+    (let [mate-key (get-in relations [(:type being) :mate])
           [_mate-id mate] (util/closest (get state mate-key) being viable-mate?)]
       (when mate
         (if (and (= :female (:gender being))
@@ -61,6 +68,47 @@
             :actor-type (:type being)
             :actor-id   (:id being)}]
           (util/move-towards-tx being mate (:terrain state)))))))
+
+(defn new-embryo [mother father mutate-fn]
+  {:energy 20 #_(* (get-in mother [:dna :gestation]))
+   ;; TODO dna encode this hardcoded number at least +
+   ;; add positive effect to longer gestations
+   :dna    (->> (keys (:dna mother))
+                (map (fn [gene]
+                       [gene (rand-nth [(get-in mother [:dna gene])
+                                        (get-in father [:dna gene])])]))
+                (map mutate-fn)
+                (into {}))})
+
+(defn give-birth [being new-being-fn]
+  (when (and (= :female (:gender being))
+             (:pregnant? being)
+             (>= (:pregnancy being)
+                 (get-in being [:dna :gestation])))
+    [{:type       :spawn
+      :actor-id   (:id being)
+      :actor-type (:type being)
+      :children   (map (fn [child] (new-being-fn (merge child (select-keys being [:x :y :generation]))))
+                       (:children being))}]))
+
+(defn interact [being state mutate-fn]
+  (let [[mate-id mate] (util/in-same-space (get state (get-in relations [(:type being) :mate])) being viable-mate?)
+        [food-id food] (util/in-same-space (get state (get-in relations [(:type being) :eat])) being)
+        ready-to-mate? (and mate (mating? being) (mating? mate))
+        ready-to-eat? (and food (hungry? being))
+        needs->event {:mate (when ready-to-mate? [{:type       :mate
+                                                   :actor-id   (:id being)
+                                                   :actor-type (:type being)
+                                                   :children   (repeatedly (get-in being [:dna :litter-size])
+                                                                           #(new-embryo being mate mutate-fn))
+
+                                                   :mate-id    mate-id}])
+                      :food (when ready-to-eat? [{:type       :eat-food
+                                                  :actor-id   (:id being)
+                                                  :actor-type (:type being)
+                                                  :nutrition  (get-in being [:dna :nutrition])
+                                                  :target-id  food-id}])}]
+    (some identity (map needs->event (get-in being [:dna :priority])))))
 
 
 ;; IDEA: Right now if a prey is hungry will always look for food instead of a mate

@@ -118,6 +118,6 @@
 ;; IDEA: Right now if a prey is hungry will always look for food instead of a mate
 ;; There could be a DNA switch that says "find any available among desires" or "find what you desire"e
 
-(defn fullfil-desires [being state]                         ;; TODO the priority of this could be DNA-encoded?
+(defn fulfil-desires [being state]                         ;; TODO the priority of this could be DNA-encoded?
   (or (and (hungry? being) (find-food-tx being state))
       (and (mating? being) (find-mate-tx being state))))

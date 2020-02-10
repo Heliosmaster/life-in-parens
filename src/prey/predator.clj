@@ -93,6 +93,6 @@
   (or (being/die predator)
       (being/give-birth predator new-predator)
       (being/interact predator state mutate-predator)
-      (being/fullfil-desires predator state)
+      (being/fulfil-desires predator state)
       (hunt predator state)
       (util/move-randomly-tx predator (:terrain state))))

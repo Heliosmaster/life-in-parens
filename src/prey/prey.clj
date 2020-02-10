@@ -92,7 +92,7 @@
         :actor-id   (:id prey)
         :actor-type :prey}])))
 
-(defn avoid-death [prey state]
+(defn escape [prey state]
   (let [predators (vals (util/around (:predators state) prey))]
     (when (seq predators)
       (util/avoid-things-tx prey predators (:terrain state)))))
@@ -101,8 +101,11 @@
   (or (decompose prey)
       (being/die prey)
       (being/give-birth prey new-prey)
-      (avoid-death prey state)
+      (escape prey state)
       (being/interact prey state mutate-prey)
-      (being/fullfil-desires prey state)
+      (being/fulfil-desires prey state)
       (util/move-randomly-tx prey (:terrain state))))
+
+
+
 

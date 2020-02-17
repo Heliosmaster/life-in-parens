@@ -20,19 +20,19 @@
 
 
 (defn new-genome []
-  {:litter-size           (util/rand-int-1 8)
-   :competition-threshold (util/rand-int-1 16)
+  {:litter-size           (util/rand-between 1 8)
+   :competition-threshold (util/rand-between 1 16)
    :avoids-competitors?   (rand-nth [true false])
-   :desire-threshold      (util/rand-int-1 1024)
-   :energy-threshold      (util/rand-int-1 128)
+   :desire-threshold      (util/rand-between 1 1024)
+   :energy-threshold      (util/rand-between 1 128)
    :offspring-energy      (util/rand-between 15 30)
    :priority              (shuffle [:food :mate])
-   :gestation             (util/rand-int-1 32)
-   :maturity-at           (util/rand-int-1 128)
-   :nutrition             (util/rand-int-1 32)
+   :gestation             (util/rand-between 1 32)
+   :maturity-at           (util/rand-between 1 128)
+   :nutrition             (util/rand-between 1 32)
    :sight-radius          (util/rand-between 2 5)
-   :max-age               (util/rand-int-1 1024)
-   :speed                 (util/rand-int-1 8)})
+   :max-age               (util/rand-between 1 1024)
+   :speed                 (util/rand-between 1 8)})
 
 (defn new-prey [{:keys [x y gender dna energy generation]}]
   {:x                 x

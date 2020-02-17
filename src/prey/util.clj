@@ -194,6 +194,3 @@
 
 (defn rand-between [min max]
   (+ min (rand-int (- max min))))
-
-(defn rand-int-1 [max]
-  (inc (rand-int (dec max))))

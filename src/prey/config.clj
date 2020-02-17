@@ -17,7 +17,7 @@
               :offspring-energy      30
               :initial-energy        40                     ;; TODO remove
               :gestation             5
-              :litter-size           3
+              :litter-size           4
               :maturity-at           10
               :decompose-after       10
               :max-age               400

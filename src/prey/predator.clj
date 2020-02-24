@@ -10,10 +10,10 @@
   {:speed            1
    :energy-threshold 100
    :litter-size      2
-   :desire-threshold 50
-   :offspring-energy 150
+   :desire-threshold 100
+   :offspring-energy 100
    :gestation        20
-   :sight-radius     8
+   :sight-radius     7
    :priority         [:mate :food]
    :nutrition        20
    :maturity-at      10

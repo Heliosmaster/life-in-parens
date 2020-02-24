@@ -14,6 +14,8 @@
     [quil.core :as q]
     [quil.middleware :as m]))
 
+(defonce running? (atom false))
+
 (def initial-live-run {:data {:prey-population     []
                               :predator-population []
                               :generation          []
@@ -151,20 +153,22 @@
 
 
 (defn update-state [state]
-  (let [map-fn map #_(when config/debug? map pmap)
-        prey-actions (map-fn (fn [[_prey-id prey]] (prey/take-decision prey state))
-                             (:preys state))
-        predator-actions (map-fn (fn [[_predator-id predator]] (predator/take-decision predator state))
-                                 (:predators state))
-        food-actions (food/replenish-food-txs state)
-        actions (apply concat (concat predator-actions prey-actions food-actions))]
-    (when config/debug?
-      (print-actions actions)
-      (print-predators state)
-      (print-preys state))
-    (-> (reduce actions/resolve-action* state actions)
-        (tick-world)
-        (save-stats))))
+  (if @running?
+    (let [map-fn map #_(when config/debug? map pmap)
+          prey-actions (map-fn (fn [[_prey-id prey]] (prey/take-decision prey state))
+                               (:preys state))
+          predator-actions (map-fn (fn [[_predator-id predator]] (predator/take-decision predator state))
+                                   (:predators state))
+          food-actions (food/replenish-food-txs state)
+          actions (apply concat (concat predator-actions prey-actions food-actions))]
+      (when config/debug?
+        (print-actions actions)
+        (print-predators state)
+        (print-preys state))
+      (-> (reduce actions/resolve-action* state actions)
+          (tick-world)
+          (save-stats)))
+    state))
 
 ;;; drawing
 

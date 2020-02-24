@@ -40,24 +40,13 @@
       (get-in being [:dna :energy-threshold])))
 
 (defn find-food-tx [being state]
-  (let [food-key (get-in relations [(:type being) :eat])    ;; TODO Maybe not use the closest always? DNA?
-        [_food-id food] (util/closest (get state food-key) being (get-in relations [(:type being) :filter-food-fn]))
+  (let [food-key (get-in relations [(:type being) :eat])
+        [_food-id food] (util/closest (get state food-key) being (get-in relations [(:type being) :filter-food-fn]))  ;; TODO Maybe not use the closest always? DNA?
         competitors (util/around (get state food-key) being (fn [_being other] (alive? other)))]
     (when (and food
                (or (not (get-in being [:dna :avoids-competitors?]))
                    (<= (count competitors) (get-in being [:dna :competition-threshold]))))
-      (let [move-action (first (util/move-towards-tx being food (:terrain state)))]
-        [move-action]
-        #_(if (and (= (:destination move-action)
-                      (util/position food))
-                   (:catch? being))
-            [move-action
-             {:type       :kill
-              :actor-id   (:id being)
-              :actor-type (:type being)
-              :nutrition  (get-in being [:dna :nutrition])
-              :target-id  food-id}]
-            [move-action])))))
+      (util/move-towards-tx being food (:terrain state)))))
 
 
 (defn find-mate-tx [being state]
@@ -100,7 +89,7 @@
         [food-id food] (util/in-same-space (get state (get-in relations [(:type being) :eat])) being)
         ready-to-mate? (and mate (mating? being) (mating? mate))
         ready-to-eat? (and food (hungry? being))
-        needs->event {:mate (when ready-to-mate? [{:type       :mate
+        needs->events {:mate (when ready-to-mate? [{:type       :mate
                                                    :actor-id   (:id being)
                                                    :actor-type (:type being)
                                                    :children   (repeatedly (get-in being [:dna :litter-size])
@@ -112,13 +101,16 @@
                                                   :actor-type (:type being)
                                                   :nutrition  (get-in being [:dna :nutrition])
                                                   :target-id  food-id}])}]
-    (some identity (map needs->event (get-in being [:dna :priority])))))
+    (some identity (map needs->events (get-in being [:dna :priority])))))
 
 
-;; IDEA: Right now if a life_in_parens is hungry will always look for food instead of a mate
+;; IDEA: Right now if a prey is hungry will always look for food instead of a mate
 ;; There could be a DNA switch that says "find any available among desires" or "find what you desire"e
 
-(defn fulfil-desires [being state]                          ;; TODO the priority of this could be DNA-encoded?
-  (or (and (hungry? being) (find-food-tx being state))
-      (and (mating? being) (find-mate-tx being state))))
+(defn fulfil-desires [being state]
+  (let [needs->events {:mate (when (mating? being)
+                               (find-mate-tx being state))
+                       :food (when (hungry? being)
+                               (find-food-tx being state))}]
+    (some identity (map needs->events (get-in being [:dna :priority])))))
 

@@ -15,6 +15,7 @@
    :gestation        (util/rand-between 16 48)
    :sight-radius     (util/rand-between 2 8)
    :priority         (shuffle [:mate :food])
+   :catch?           (rand-nth [true false])
    :nutrition        (util/rand-between 16 32)
    :maturity-at      (util/rand-between 1 128)
    :max-age          (util/rand-between 1 1024)})
@@ -32,7 +33,6 @@
    :energy               100
    :desire               0
    :dead?                false
-   :catch?               true                               ;; TODO DNA encode this? Maybe see that it will be selected?
    :mutation-probability (:mutation-probability predator-config)
    :dna                  (or dna {:speed            1
                                   :energy-threshold 100
@@ -60,7 +60,7 @@
       (let [move-action (first (util/move-towards-tx being prey (:terrain state)))]
         (if (and (= (:destination move-action)
                     (util/position prey))
-                 (:catch? being))
+                 (get-in being [:dna :catch?]))
           [move-action
            {:type       :kill
             :actor-id   (:id being)

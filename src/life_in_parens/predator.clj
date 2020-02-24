@@ -7,17 +7,17 @@
 (def predator-config (:predator config/config))
 
 (defn new-genome []
-  {:speed            1
-   :energy-threshold 100
-   :litter-size      2
-   :desire-threshold 100
-   :offspring-energy 100
-   :gestation        20
-   :sight-radius     7
-   :priority         [:mate :food]
-   :nutrition        20
-   :maturity-at      10
-   :max-age          400})
+  {:speed            (util/rand-between 1 3)
+   :energy-threshold (util/rand-between 1 256)
+   :litter-size      (util/rand-between 1 4)
+   :desire-threshold (util/rand-between 1 1024)
+   :offspring-energy (util/rand-between 50 150)
+   :gestation        (util/rand-between 16 48)
+   :sight-radius     (util/rand-between 2 8)
+   :priority         (shuffle [:mate :food])
+   :nutrition        (util/rand-between 16 32)
+   :maturity-at      (util/rand-between 1 128)
+   :max-age          (util/rand-between 1 1024)})
 
 (defn mutate-predator [[gene value]]
   (if (< (rand) (:mutation-probability predator-config))
@@ -34,18 +34,17 @@
    :dead?                false
    :catch?               true                               ;; TODO DNA encode this? Maybe see that it will be selected?
    :mutation-probability (:mutation-probability predator-config)
-   :dna                  (or dna (new-genome))
-   #_#_:dna (or dna {:litter-size           (:litter-size predator-config)
-                     :competition-threshold (:competition-threshold predator-config)
-                     :avoids-competitors?   false
-                     :desire-threshold      (:desire-threshold predator-config)
-                     :energy-threshold      (:energy-threshold predator-config)
-                     :priority              [:mate :food]
-                     :gestation             (:gestation predator-config)
-                     :maturity-at           (:maturity-at predator-config)
-                     :nutrition             (:nutrition predator-config)
-                     :max-age               (:max-age predator-config)
-                     :speed                 (:speed predator-config)})
+   :dna                  (or dna {:speed            1
+                                  :energy-threshold 100
+                                  :litter-size      2
+                                  :desire-threshold 100
+                                  :offspring-energy 100
+                                  :gestation        20
+                                  :sight-radius     7
+                                  :priority         [:mate :food]
+                                  :nutrition        20
+                                  :maturity-at      10
+                                  :max-age          400})
    :direction-inertia    (:direction-inertia predator-config)
    :direction            (rand-nth [:north :south :east :west])
    :gender               (or gender (rand-nth [:male :female]))
@@ -60,15 +59,15 @@
                    (<= (count competitors) (get-in being [:dna :competition-threshold]))))
       (let [move-action (first (util/move-towards-tx being prey (:terrain state)))]
         (if (and (= (:destination move-action)
-                      (util/position prey))
-                   (:catch? being))
-            [move-action
-             {:type       :kill
-              :actor-id   (:id being)
-              :actor-type (:type being)
-              :nutrition  (get-in being [:dna :nutrition])
-              :target-id  prey-id}]
-            [move-action])))))
+                    (util/position prey))
+                 (:catch? being))
+          [move-action
+           {:type       :kill
+            :actor-id   (:id being)
+            :actor-type (:type being)
+            :nutrition  (get-in being [:dna :nutrition])
+            :target-id  prey-id}]
+          [move-action])))))
 
 
 (defn initialize [terrain]

@@ -14,7 +14,7 @@
     [quil.core :as q]
     [quil.middleware :as m]))
 
-(defonce running? (atom false))
+(defonce running? (atom true))
 
 (def initial-live-run {:data {:prey-population     []
                               :predator-population []

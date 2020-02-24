@@ -1,4 +1,4 @@
-(ns prey.chart
+(ns life-in-parens.chart
   (:require [quil.core :as q]
             [quil.middleware :as m]))
 

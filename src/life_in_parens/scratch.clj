@@ -1,8 +1,8 @@
-(ns prey.scratch
+(ns life-in-parens.scratch
   (:require [quil.core :as q]
             [quil.middleware :as m]
-            [prey.util :as util]
-            [prey.config :as config]))
+            [life-in-parens.util :as util]
+            [life-in-parens.config :as config]))
 
 (defn move [being]
   (let [pos (select-keys being [:x :y])

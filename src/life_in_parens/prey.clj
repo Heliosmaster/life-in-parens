@@ -1,7 +1,7 @@
-(ns prey.prey
-  (:require [prey.util :as util]
-            [prey.being :as being]
-            [prey.config :as config]))
+(ns life-in-parens.prey
+  (:require [life-in-parens.util :as util]
+            [life-in-parens.being :as being]
+            [life-in-parens.config :as config]))
 
 (def prey-config (:prey config/config))
 

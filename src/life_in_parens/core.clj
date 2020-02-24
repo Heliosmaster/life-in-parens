@@ -1,16 +1,16 @@
-(ns prey.core
+(ns life-in-parens.core
   (:require
     [clojure.core.async :as async]
     [clojure.pprint :as pprint]
     [clojure.string :as str]
-    [prey.actions :as actions]
-    [prey.chart :as chart]
-    [prey.config :as config]
-    [prey.food :as food]
-    [prey.predator :as predator]
-    [prey.prey :as prey]
-    [prey.terrain :as terrain]
-    [prey.util :as util]
+    [life-in-parens.actions :as actions]
+    [life-in-parens.chart :as chart]
+    [life-in-parens.config :as config]
+    [life-in-parens.food :as food]
+    [life-in-parens.predator :as predator]
+    [life-in-parens.prey :as prey]
+    [life-in-parens.terrain :as terrain]
+    [life-in-parens.util :as util]
     [quil.core :as q]
     [quil.middleware :as m]))
 

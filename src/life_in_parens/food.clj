@@ -1,6 +1,6 @@
-(ns prey.food
-  (:require [prey.util :as util]
-            [prey.config :as config]))
+(ns life-in-parens.food
+  (:require [life-in-parens.util :as util]
+            [life-in-parens.config :as config]))
 
 (defn new-food [{:keys [x y]}]
   {:x    x

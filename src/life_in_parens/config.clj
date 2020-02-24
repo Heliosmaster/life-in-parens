@@ -1,4 +1,4 @@
-(ns prey.config)
+(ns life-in-parens.config)
 
 (def debug? false)
 (def grid-size (if debug? 10 50))

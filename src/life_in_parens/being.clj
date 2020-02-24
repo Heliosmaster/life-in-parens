@@ -1,5 +1,5 @@
-(ns prey.being
-  (:require [prey.util :as util]))
+(ns life-in-parens.being
+  (:require [life-in-parens.util :as util]))
 
 (defn alive? [being]
   (not (:dead? being)))
@@ -115,7 +115,7 @@
     (some identity (map needs->event (get-in being [:dna :priority])))))
 
 
-;; IDEA: Right now if a prey is hungry will always look for food instead of a mate
+;; IDEA: Right now if a life_in_parens is hungry will always look for food instead of a mate
 ;; There could be a DNA switch that says "find any available among desires" or "find what you desire"e
 
 (defn fulfil-desires [being state]                          ;; TODO the priority of this could be DNA-encoded?

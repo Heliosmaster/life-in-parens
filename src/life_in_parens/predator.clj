@@ -1,8 +1,8 @@
-(ns prey.predator
+(ns life-in-parens.predator
   (:require
-    [prey.being :as being]
-    [prey.config :as config]
-    [prey.util :as util]))
+    [life-in-parens.being :as being]
+    [life-in-parens.config :as config]
+    [life-in-parens.util :as util]))
 
 (def predator-config (:predator config/config))
 

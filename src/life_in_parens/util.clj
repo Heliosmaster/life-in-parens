@@ -1,5 +1,5 @@
-(ns prey.util
-  (:require [prey.config :as config])
+(ns life-in-parens.util
+  (:require [life-in-parens.config :as config])
   (:import [java.util UUID]))
 
 (defn new-id []

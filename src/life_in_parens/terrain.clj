@@ -1,6 +1,6 @@
-(ns prey.terrain
+(ns life-in-parens.terrain
   (:require [taoensso.tufte :as t]
-            [prey.config :as config]))
+            [life-in-parens.config :as config]))
 
 (defn all-neighbors [x y]
   (let [n (fn [z] (cond-> [z]

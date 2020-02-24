@@ -1,4 +1,4 @@
-(ns prey.actions)
+(ns life-in-parens.actions)
 
 (def being-key {:prey     :preys
                 :predator :predators

@@ -13,7 +13,7 @@
 ;; Priority = vector with elements #{:food :mate}, it describes which of the two things has priority in case both are needing
 ;; Gestation = The length of pregnancy, longer gestation should yield a higher base energy (not counting food) for the children
 ;; Maturity at = the longer a specimen spends in 'infancy' i.e. without triggering reproduction ;; TODO another effect? (maybe 1 extra fast always when immature?)
-;; Nutrition = the higher this is, the more nourishment the speciment gains from eating ;; TODO Currently no downsize
+;; Nutrition = the higher this is, the more nourishment the speciment gains from eating ;; TODO Currently no downside
 ;; Max-age = the threshold in which the specimen will die of old age ;; TODO currently no downside
 ;; Speed = the speed at which the specimen can move
 ;; TODO Memory???
@@ -101,7 +101,7 @@
   (or (decompose prey)
       (being/die prey)
       (being/give-birth prey new-prey)
-      (escape prey state)
+      (escape prey state)                                   ;; TODO this should be a preference in priority
       (being/interact prey state mutate-prey)
       (being/fulfil-desires prey state)
       (util/move-randomly-tx prey (:terrain state))))

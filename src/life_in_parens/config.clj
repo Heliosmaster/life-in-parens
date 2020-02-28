@@ -15,7 +15,7 @@
               :sight-radius          5
               :initial-density       0.035
               :offspring-energy      30
-              :initial-energy        40                     ;; TODO remove
+              :initial-energy        40
               :gestation             5
               :litter-size           3
               :maturity-at           10

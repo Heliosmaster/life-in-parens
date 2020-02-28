@@ -59,3 +59,31 @@
     :features [:keep-on-top]
     :middleware [m/fun-mode]
     ))
+
+;;;;
+
+(def size 500)
+
+(defn setup2 []
+  (q/frame-rate 5)
+  (q/background 255)
+  [{:x 0 :y 0}])
+
+(defn update2 [state]
+  (conj state {:x (rand-int 500)
+               :y (rand-int 500)}))
+
+(defn draw2 [state]
+  (doseq [[p1 p2] (partition 2 1 state)]
+    (q/stroke (rand-int 255) (rand-int 255) (rand-int 255))
+    (q/line (:x p1) (:y p1)
+            (:x p2) (:y p2))))
+
+(defn sample-sketch []
+  (q/sketch
+    :size [500 500]
+    :setup setup2
+    :draw draw2
+    :update update2
+    :features [:keep-on-top]
+    :middleware [m/fun-mode]))

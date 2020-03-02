@@ -73,6 +73,9 @@
 (defn last-gen []
   (last (:preys @last-run)))
 
+(defn plot-population []
+  (chart/line-chart {:data [(map count (:preys @last-run))]} {:adapt? true :title (str/capitalize "Prey population")}))
+
 (defn plot-average-dnas []
   (let [average-dnas (map average-dna (:preys @last-run))
         genes (keys (last average-dnas))]

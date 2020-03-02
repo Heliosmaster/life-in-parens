@@ -8,9 +8,9 @@
 
 (defn new-genome []
   {:speed            (util/rand-between 1 3)
-   :energy-threshold (util/rand-between 1 256)
+   :energy-threshold (util/rand-between 1 100)
    :litter-size      (util/rand-between 1 4)
-   :desire-threshold (util/rand-between 1 1024)
+   :desire-threshold (util/rand-between 1 512)
    :offspring-energy (util/rand-between 50 150)
    :gestation        (util/rand-between 16 48)
    :sight-radius     (util/rand-between 2 8)

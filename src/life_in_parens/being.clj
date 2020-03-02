@@ -70,7 +70,7 @@
                  (map mutate-fn)
                  (into {}))]
     {;; TODO add positive effect to longer gestations
-     :energy (:offspring-energy dna)
+     :energy (* 4 (get-in mother [:dna :gestation]))
      :dna    dna}))
 
 (defn give-birth [being new-being-fn]

@@ -23,16 +23,17 @@
   {:litter-size           (util/rand-between 1 8)
    :competition-threshold (util/rand-between 1 16)
    :avoids-competitors?   (rand-nth [true false])
-   :desire-threshold      (util/rand-between 1 1024)
+   :desire-threshold      (util/rand-between 64 1024)
    :energy-threshold      (util/rand-between 1 128)
    :offspring-energy      (util/rand-between 15 30)
-   :priority              (shuffle [:food :mate])
+   :priority              (shuffle [:food :survive :mate])
    :gestation             (util/rand-between 1 32)
    :maturity-at           (util/rand-between 1 128)
    :nutrition             (util/rand-between 1 32)
    :sight-radius          (util/rand-between 2 5)
    :max-age               (util/rand-between 1 1024)
    :speed                 (util/rand-between 1 8)})
+
 
 (defn new-prey [{:keys [x y gender dna energy generation]}]
   {:x                 x
@@ -42,19 +43,19 @@
    :energy            (or energy (:initial-energy prey-config))
    :desire            0
    :dead?             false
-   :dna               (or dna {:litter-size           (:litter-size prey-config)
-                               :competition-threshold (:competition-threshold prey-config)
+   :dna               (or dna {:litter-size           3
+                               :competition-threshold 3
                                :avoids-competitors?   false
-                               :offspring-energy      (:offspring-energy prey-config)
-                               :desire-threshold      (:desire-threshold prey-config)
-                               :energy-threshold      (:energy-threshold prey-config)
-                               :priority              [:mate :food]
-                               :sight-radius          (:sight-radius prey-config)
-                               :gestation             (:gestation prey-config)
-                               :maturity-at           (:maturity-at prey-config)
-                               :nutrition             (:nutrition prey-config)
-                               :max-age               (:max-age prey-config)
-                               :speed                 (:speed prey-config)})
+                               :offspring-energy      30
+                               :desire-threshold      80
+                               :energy-threshold      100
+                               :priority              [:mate :survive :food]
+                               :sight-radius          5
+                               :gestation             5
+                               :maturity-at           20
+                               :nutrition             20
+                               :max-age               400
+                               :speed                 1})
    :direction-inertia (:direction-inertia prey-config)
    :direction         (rand-nth [:north :south :east :west])
    :gender            (or gender (rand-nth [:male :female]))
@@ -97,11 +98,18 @@
     (when (seq predators)
       (util/avoid-things-tx prey predators (:terrain state)))))
 
+(defn fulfil-desires [being state]
+  (let [needs->events {:mate (when (being/mating? being)
+                               (being/find-mate-tx being state))
+                       :survive (escape being state)
+                       :food (when (being/hungry? being)
+                               (being/find-food-tx being state))}]
+    (some identity (map needs->events (get-in being [:dna :priority])))))
+
 (defn take-decision [prey state]
   (or (decompose prey)
       (being/die prey)
       (being/give-birth prey new-prey)
-      (escape prey state)                                   ;; TODO this should be a preference in priority
       (being/interact prey state mutate-prey)
       (being/fulfil-desires prey state)
       (util/move-randomly-tx prey (:terrain state))))

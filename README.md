@@ -1,5 +1,7 @@
 # Life in parens: simulating an ecosystem with Clojure
 
+This code is accompanied by [the slides](https://docs.google.com/presentation/d/e/2PACX-1vQqrNNCxcWHpGBT9FPJF4oqltMtq5A8KqeH4MNLv1EMvOq4DXYZ6XwAdavNQXbHLOvjwM0mKkuEIpib/pub?start=false&loop=false&delayms=60000) of my ClojureD talk.
+
 Nature is the sum of a large amount of complex ecosystems, where different species coexist in a fragile equilibrium.
 
 In this talk, we will simulate our very own ecosystem with Clojure, and explore emerging patterns under simple sets of rules.
